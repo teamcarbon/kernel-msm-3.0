@@ -41,7 +41,7 @@ struct class *mdp_class;
 static DECLARE_WAIT_QUEUE_HEAD(mdp_ppp_waitqueue);
 static unsigned int mdp_irq_mask;
 static unsigned int mdp_dma_timer_enable = 0;
-struct clk *mdp_clk_to_disable_later = 0;
+static struct mdp_info *the_mdp;
 static struct  mdp_blit_req *timeout_req;
 #ifdef CONFIG_FB_MSM_OVERLAY
 extern int mdp4_overlay_get(struct mdp_device *mdp_dev, struct fb_info *info, struct mdp_overlay *req);
@@ -81,6 +81,8 @@ static int locked_enable_mdp_irq(struct mdp_info *mdp, uint32_t mask)
 	/* if the mdp irq is not already enabled enable it */
 	if (!mdp_irq_mask) {
 		clk_enable(mdp->clk);
+		if (mdp->pclk)
+			clk_enable(mdp->pclk);
 		enable_irq(mdp->irq);
 		if (mdp->state & MDP_STATE_STANDBY) {
 #ifdef CONFIG_MSM_MDP40
@@ -132,6 +134,8 @@ static int locked_disable_mdp_irq(struct mdp_info *mdp, uint32_t mask)
 	/* if no one is waiting on the interrupt, disable it */
 	if (!mdp_irq_mask) {
 		disable_irq_nosync(mdp->irq);
+		if (mdp->pclk)
+			clk_disable(mdp->pclk);
 		if (mdp->clk)
 			clk_disable(mdp->clk);
 		if (!(mdp->state & MDP_STATE_STANDBY))
@@ -840,12 +844,16 @@ int mdp_probe(struct platform_device *pdev)
 		goto error_get_mdp_clk;
 	}
 
-        mdp->ebi1_clk = clk_get(NULL, "ebi1_clk");
-        if (IS_ERR(mdp->ebi1_clk)) {
-                pr_err("mdp: failed to get ebi1 clk\n");
-                ret = PTR_ERR(mdp->ebi1_clk);
-                goto error_get_ebi1_clk;
-        }
+	mdp->pclk = clk_get(&pdev->dev, "mdp_pclk");
+	if (IS_ERR(mdp->pclk))
+		mdp->pclk = NULL;
+
+	mdp->ebi1_clk = clk_get(NULL, "ebi1_clk");
+	if (IS_ERR(mdp->ebi1_clk)) {
+		pr_err("mdp: failed to get ebi1 clk\n");
+		ret = PTR_ERR(mdp->ebi1_clk);
+		goto error_get_ebi1_clk;
+	}
 
 	ret = request_irq(mdp->irq, mdp_isr, IRQF_DISABLED, "msm_mdp", mdp);
 	if (ret)
@@ -853,8 +861,8 @@ int mdp_probe(struct platform_device *pdev)
 	disable_irq(mdp->irq);
 
 	clk_enable(mdp->clk);
-	mdp_clk_to_disable_later = mdp->clk;
-
+	if (mdp->pclk)
+		clk_enable(mdp->pclk);
 #ifdef CONFIG_MSM_MDP40
 	//MDP_DISP_INTF_SEL
 	if (mdp_readl(mdp, 0xc0000))
@@ -892,16 +900,22 @@ int mdp_probe(struct platform_device *pdev)
 	setup_timer(&mdp->standby_timer, mdp_do_standby_timer, (unsigned long )mdp);
 	setup_timer(&mdp->dma_timer, mdp_do_dma_timer, (unsigned long )mdp);
 
+	the_mdp = mdp;
 
 	pr_info("%s: initialized\n", __func__);
 
 	return 0;
 
 error_device_register:
+	if (mdp->pclk)
+		clk_disable(mdp->pclk);
+	clk_disable(mdp->clk);
 	free_irq(mdp->irq, mdp);
 error_request_irq:
 	clk_put(mdp->ebi1_clk);
 error_get_ebi1_clk:
+	if (mdp->pclk)
+		clk_put(mdp->pclk);
 	clk_put(mdp->clk);
 error_get_mdp_clk:
 error_mddi_pmdh_register:
@@ -919,8 +933,12 @@ static struct platform_driver msm_mdp_driver = {
 
 static int __init mdp_lateinit(void)
 {
-	if (mdp_clk_to_disable_later)
-		clk_disable(mdp_clk_to_disable_later);
+	struct mdp_info *mdp = the_mdp;
+	if (the_mdp) {
+		if (mdp->pclk)
+			clk_disable(mdp->pclk);
+		clk_disable(mdp->clk);
+	}
 	return 0;
 }
 
