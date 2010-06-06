@@ -42,6 +42,7 @@ struct wb_writeback_work {
 	long nr_pages;
 	struct super_block *sb;
 	enum writeback_sync_modes sync_mode;
+	unsigned int tagged_writepages:1;
 	unsigned int for_kupdate:1;
 	unsigned int range_cyclic:1;
 	unsigned int for_background:1;
@@ -606,6 +607,7 @@ static long wb_writeback(struct bdi_writeback *wb,
 {
 	struct writeback_control wbc = {
 		.sync_mode		= work->sync_mode,
+		.tagged_writepages	= work->tagged_writepages,
 		.older_than_this	= NULL,
 		.for_kupdate		= work->for_kupdate,
 		.for_background		= work->for_background,
@@ -613,6 +615,7 @@ static long wb_writeback(struct bdi_writeback *wb,
 	};
 	unsigned long oldest_jif;
 	long wrote = 0;
+	long write_chunk = MAX_WRITEBACK_PAGES;
 	struct inode *inode;
 
 	if (wbc.for_kupdate) {
@@ -625,6 +628,23 @@ static long wb_writeback(struct bdi_writeback *wb,
 		wbc.range_end = LLONG_MAX;
 	}
 
+	/*
+	 * WB_SYNC_ALL mode does livelock avoidance by syncing dirty
+	 * inodes/pages in one big loop. Setting wbc.nr_to_write=LONG_MAX
+	 * here avoids calling into writeback_inodes_wb() more than once.
+	 *
+	 * The intended call sequence for WB_SYNC_ALL writeback is:
+	 *
+	 *      wb_writeback()
+	 *          __writeback_inodes_sb()     <== called only once
+	 *              write_cache_pages()     <== called once for each inode
+	 *                   (quickly) tag currently dirty pages
+	 *                   (maybe slowly) sync all tagged pages
+	 */
+	if (wbc.sync_mode == WB_SYNC_ALL || wbc.tagged_writepages)
+		write_chunk = LONG_MAX;
+
+	wbc.wb_start = jiffies; /* livelock avoidance */
 	for (;;) {
 		/*
 		 * Stop writeback when nr_pages has been consumed
@@ -1044,9 +1064,11 @@ void writeback_inodes_sb(struct super_block *sb)
 	unsigned long nr_unstable = global_page_state(NR_UNSTABLE_NFS);
 	DECLARE_COMPLETION_ONSTACK(done);
 	struct wb_writeback_work work = {
-		.sb		= sb,
-		.sync_mode	= WB_SYNC_NONE,
-		.done		= &done,
+		.sb			= sb,
+		.sync_mode		= WB_SYNC_NONE,
+		.tagged_writepages	= 1,
+		.done			= &done,
+		.nr_pages		= nr,
 	};
 
 	WARN_ON(!rwsem_is_locked(&sb->s_umount));
