@@ -913,7 +913,7 @@ static void mmc_power_up(struct mmc_host *host)
 	 */
 	mmc_delay(10);
 
-	host->ios.clock = host->f_min;
+	host->ios.clock = host->f_init;
 
 	host->ios.power_mode = MMC_POWER_ON;
 	mmc_set_ios(host);
@@ -1436,6 +1436,8 @@ void mmc_rescan(struct work_struct *work)
 	int err;
 	unsigned long flags;
 	int extend_wakelock = 0;
+	int i;
+	const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1482,57 +1484,72 @@ void mmc_rescan(struct work_struct *work)
 	if (host->ops->get_cd && host->ops->get_cd(host) == 0)
 		goto out;
 
-	mmc_claim_host(host);
+	for (i = 0; i < ARRAY_SIZE(freqs); i++) {
+		mmc_claim_host(host);
 
-	mmc_power_up(host);
-	sdio_reset(host);
-	mmc_go_idle(host);
+		if (freqs[i] >= host->f_min)
+			host->f_init = freqs[i];
+		else if (!i || freqs[i-1] > host->f_min)
+			host->f_init = host->f_min;
+		else {
+			mmc_release_host(host);
+			goto out;
+		}
+		pr_info("%s: %s: trying to init card at %u Hz\n",
+			mmc_hostname(host), __func__, host->f_init);
 
-	mmc_send_if_cond(host, host->ocr_avail);
+		mmc_power_up(host);
+		sdio_reset(host);
+		mmc_go_idle(host);
 
-	/*
-	 * First we search for SDIO...
-	 */
-	err = mmc_send_io_op_cond(host, 0, &ocr);
-	if (!err) {
-		if (mmc_attach_sdio(host, ocr)) {
-			mmc_claim_host(host);
-			/* try SDMEM (but not MMC) even if SDIO is broken */
-			if (mmc_send_app_op_cond(host, 0, &ocr))
-				goto out_fail;
+		mmc_send_if_cond(host, host->ocr_avail);
 
+		/*
+		 * First we search for SDIO...
+		 */
+		err = mmc_send_io_op_cond(host, 0, &ocr);
+		if (!err) {
+			if (mmc_attach_sdio(host, ocr)) {
+				mmc_claim_host(host);
+				/*
+				 * Try SDMEM (but not MMC) even if SDIO
+				 * is broken.
+				 */
+				if (mmc_send_app_op_cond(host, 0, &ocr))
+					goto out_fail;
+
+				if (mmc_attach_sd(host, ocr))
+					mmc_power_off(host);
+			}
+			goto out;
+		}
+
+		/*
+		 * ...then normal SD...
+		 */
+		err = mmc_send_app_op_cond(host, 0, &ocr);
+		if (!err) {
 			if (mmc_attach_sd(host, ocr))
 				mmc_power_off(host);
+			extend_wakelock = 1;
+			goto out;
 		}
-		goto out;
-	}
 
-	/*
-	 * ...then normal SD...
-	 */
-	err = mmc_send_app_op_cond(host, 0, &ocr);
-	if (!err) {
-		if (mmc_attach_sd(host, ocr))
-			mmc_power_off(host);
-		extend_wakelock = 1;
-		goto out;
-	}
-
-	/*
-	 * ...and finally MMC.
-	 */
-	err = mmc_send_op_cond(host, 0, &ocr);
-	if (!err) {
-		if (mmc_attach_mmc(host, ocr))
-			mmc_power_off(host);
-		extend_wakelock = 1;
-		goto out;
-	}
+		/*
+		 * ...and finally MMC.
+		 */
+		err = mmc_send_op_cond(host, 0, &ocr);
+		if (!err) {
+			if (mmc_attach_mmc(host, ocr))
+				mmc_power_off(host);
+			extend_wakelock = 1;
+			goto out;
+		}
 
 out_fail:
-	mmc_release_host(host);
-	mmc_power_off(host);
-
+		mmc_release_host(host);
+		mmc_power_off(host);
+	}
 out:
 	if (extend_wakelock)
 		wake_lock_timeout(&mmc_delayed_work_wake_lock, HZ / 2);
