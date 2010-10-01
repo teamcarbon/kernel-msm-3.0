@@ -440,7 +440,8 @@ static int zram_make_request(struct request_queue *queue, struct bio *bio)
 	struct zram *zram = queue->queuedata;
 
 	if (unlikely(!zram->init_done)) {
-		bio_io_error(bio);
+		set_bit(BIO_UPTODATE, &bio->bi_flags);
+		bio_endio(bio, 0);
 		return 0;
 	}
 
