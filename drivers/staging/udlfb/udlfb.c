@@ -937,6 +937,66 @@ static struct fb_ops dlfb_ops = {
 	.fb_set_par = dlfb_ops_set_par,
 };
 
+
+/*
+ * Assumes &info->lock held by caller
+ * Assumes no active clients have framebuffer open
+ */
+static int dlfb_realloc_framebuffer(struct dlfb_data *dev, struct fb_info *info)
+{
+	int retval = -ENOMEM;
+	int old_len = info->fix.smem_len;
+	int new_len;
+	unsigned char *old_fb = info->screen_base;
+	unsigned char *new_fb;
+	unsigned char *new_back;
+
+	dl_warn("Reallocating framebuffer. Addresses will change!\n");
+
+	new_len = info->fix.line_length * info->var.yres;
+
+	if (PAGE_ALIGN(new_len) > old_len) {
+		/*
+		 * Alloc system memory for virtual framebuffer
+		 */
+		new_fb = vmalloc(new_len);
+		if (!new_fb) {
+			dl_err("Virtual framebuffer alloc failed\n");
+			goto error;
+		}
+
+		if (info->screen_base) {
+			memcpy(new_fb, old_fb, old_len);
+			vfree(info->screen_base);
+		}
+
+		info->screen_base = new_fb;
+		info->fix.smem_len = PAGE_ALIGN(new_len);
+		info->fix.smem_start = (unsigned long) new_fb;
+		info->flags = udlfb_info_flags;
+
+		/*
+		 * Second framebuffer copy to mirror the framebuffer state
+		 * on the physical USB device. We can function without this.
+		 * But with imperfect damage info we may send pixels over USB
+		 * that were, in fact, unchanged - wasting limited USB bandwidth
+		 */
+		new_back = vzalloc(new_len);
+		if (!new_back)
+			dl_info("No shadow/backing buffer allocated\n");
+		else {
+			if (dev->backing_buffer)
+				vfree(dev->backing_buffer);
+			dev->backing_buffer = new_back;
+		}
+	}
+
+	retval = 0;
+
+error:
+	return retval;
+}
+
 /*
  * Calls dlfb_get_edid() to query the EDID of attached monitor via usb cmds
  * Then parses EDID into three places used by various parts of fbdev:
