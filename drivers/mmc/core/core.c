@@ -1856,7 +1856,7 @@ static int __init mmc_init(void)
 
 	wake_lock_init(&mmc_delayed_work_wake_lock, WAKE_LOCK_SUSPEND, "mmc_delayed_work");
 
-	workqueue = create_singlethread_workqueue("kmmcd");
+	workqueue = alloc_ordered_workqueue("kmmcd", 0);
 	if (!workqueue)
 		return -ENOMEM;
 
