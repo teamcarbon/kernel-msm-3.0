@@ -29,7 +29,6 @@ config SQUASHFS
 config SQUASHFS_XATTRS
 	bool "Squashfs XATTR support"
 	depends on SQUASHFS
-	default n
 	help
 	  Saying Y here includes support for extended attributes (xattrs).
 	  Xattrs are name:value pairs associated with inodes by
@@ -46,7 +45,6 @@ config SQUASHFS_EMBEDDED
 
 	bool "Additional option for memory-constrained systems" 
 	depends on SQUASHFS
-	default n
 	help
 	  Saying Y here allows you to specify cache size.
 
