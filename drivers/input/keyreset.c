@@ -33,6 +33,7 @@ struct keyreset_state {
 	int key_down;
 	int key_up;
 	int restart_disabled;
+	int (*reset_fn)(void);
 };
 
 static int restart_requested;
@@ -89,8 +90,12 @@ static void keyreset_event(struct input_handle *handle, unsigned int type,
 		if (restart_requested)
 			panic("keyboard reset failed, %d", restart_requested);
 		pr_info("keyboard reset\n");
-		schedule_delayed_work(&restart_work, KEYRESET_DELAY);
-		restart_requested = 1;
+		if (state->reset_fn) {
+			restart_requested = state->reset_fn();
+		} else {
+			schedule_work(&restart_work);
+			restart_requested = 1;
+		}
 	} else if (restart_requested == 1) {
 		if (cancel_delayed_work(&restart_work)) {
 			pr_info("%s: cancel restart work\n", __func__);
@@ -194,6 +199,10 @@ static int keyreset_probe(struct platform_device *pdev)
 			__set_bit(key, state->upbit);
 		}
 	}
+
+	if (pdata->reset_fn)
+		state->reset_fn = pdata->reset_fn;
+
 	state->input_handler.event = keyreset_event;
 	state->input_handler.connect = keyreset_connect;
 	state->input_handler.disconnect = keyreset_disconnect;
