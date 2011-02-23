@@ -913,7 +913,16 @@ static void mmc_power_up(struct mmc_host *host)
 	 */
 	mmc_delay(10);
 
+#ifndef CONFIG_MMC_USE_ONLY_HOST_DEFINED_FREQUENCY
 	host->ios.clock = host->f_init;
+#else
+    if (host->f_min > 400000) {
+        pr_warning("%s: Minimum clock frequency too high for "
+                "identification mode\n", mmc_hostname(host));
+        host->ios.clock = host->f_min;
+   } else
+        host->ios.clock = 400000;
+#endif
 
 	host->ios.power_mode = MMC_POWER_ON;
 	mmc_set_ios(host);
@@ -1437,7 +1446,9 @@ void mmc_rescan(struct work_struct *work)
 	unsigned long flags;
 	int extend_wakelock = 0;
 	int i;
+#ifndef CONFIG_MMC_USE_ONLY_HOST_DEFINED_FREQUENCY
 	const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
+#endif
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1484,6 +1495,7 @@ void mmc_rescan(struct work_struct *work)
 	if (host->ops->get_cd && host->ops->get_cd(host) == 0)
 		goto out;
 
+#ifndef CONFIG_MMC_USE_ONLY_HOST_DEFINED_FREQUENCY
 	for (i = 0; i < ARRAY_SIZE(freqs); i++) {
 		mmc_claim_host(host);
 
@@ -1495,6 +1507,10 @@ void mmc_rescan(struct work_struct *work)
 			mmc_release_host(host);
 			goto out;
 		}
+#else
+		mmc_claim_host(host);
+#endif
+
 		pr_info("%s: %s: trying to init card at %u Hz\n",
 			mmc_hostname(host), __func__, host->f_init);
 
@@ -1549,7 +1565,9 @@ void mmc_rescan(struct work_struct *work)
 out_fail:
 		mmc_release_host(host);
 		mmc_power_off(host);
+#ifndef CONFIG_MMC_USE_ONLY_HOST_DEFINED_FREQUENCY
 	}
+#endif
 out:
 	if (extend_wakelock)
 		wake_lock_timeout(&mmc_delayed_work_wake_lock, HZ / 2);
