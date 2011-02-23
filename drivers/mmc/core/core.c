@@ -913,16 +913,7 @@ static void mmc_power_up(struct mmc_host *host)
 	 */
 	mmc_delay(10);
 
-#ifndef CONFIG_MMC_USE_ONLY_HOST_DEFINED_FREQUENCY
 	host->ios.clock = host->f_init;
-#else
-    if (host->f_min > 400000) {
-        pr_warning("%s: Minimum clock frequency too high for "
-                "identification mode\n", mmc_hostname(host));
-        host->ios.clock = host->f_min;
-   } else
-        host->ios.clock = 400000;
-#endif
 
 	host->ios.power_mode = MMC_POWER_ON;
 	mmc_set_ios(host);
@@ -1509,6 +1500,12 @@ void mmc_rescan(struct work_struct *work)
 		}
 #else
 		mmc_claim_host(host);
+        if (host->f_min > 400000) {
+            pr_warning("%s: Minimum clock frequency too high for "
+                    "identification mode\n", mmc_hostname(host));
+            host->f_init = 400000;
+        } else
+            host->f_init = host->f_min;
 #endif
 
 		pr_info("%s: %s: trying to init card at %u Hz\n",
