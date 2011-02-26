@@ -313,7 +313,6 @@ static bool radeon_atom_apply_quirks(struct drm_device *dev,
 				     uint16_t *line_mux,
 				     struct radeon_hpd *hpd)
 {
-	struct radeon_device *rdev = dev->dev_private;
 
 	/* Asus M2A-VM HDMI board lists the DVI port as HDMI */
 	if ((dev->pdev->device == 0x791e) &&
@@ -444,8 +443,6 @@ static bool radeon_atom_apply_quirks(struct drm_device *dev,
 	if ((dev->pdev->device == 0x95c4) &&
 	    (dev->pdev->subsystem_vendor == 0x1025) &&
 	    (dev->pdev->subsystem_device == 0x013c)) {
-		struct radeon_gpio_rec gpio;
-
 		if ((*connector_type == DRM_MODE_CONNECTOR_DVII) &&
 		    (supported_device == ATOM_DEVICE_DFP1_SUPPORT)) {
 			/* actually it's a DVI-D port not DVI-I */

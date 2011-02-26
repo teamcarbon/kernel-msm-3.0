@@ -601,7 +601,6 @@ atombios_get_encoder_mode(struct drm_encoder *encoder)
 	struct drm_connector *connector;
 	struct radeon_connector *radeon_connector;
 	struct radeon_connector_atom_dig *dig_connector;
-	struct radeon_encoder *radeon_encoder = to_radeon_encoder(encoder);
 
 	connector = radeon_get_connector_for_encoder(encoder);
 	if (!connector) {
