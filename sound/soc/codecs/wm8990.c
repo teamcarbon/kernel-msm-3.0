@@ -30,8 +30,6 @@
 
 #include "wm8990.h"
 
-#define WM8990_VERSION "0.2"
-
 /* codec private data */
 struct wm8990_priv {
 	unsigned int sysclk;
@@ -1185,7 +1183,7 @@ static int wm8990_set_bias_level(struct snd_soc_codec *codec,
 				     WM8990_VMIDTOG);
 
 			/* Delay to allow output caps to discharge */
-			msleep(msecs_to_jiffies(300));
+			msleep(300);
 
 			/* Disable VMIDTOG */
 			snd_soc_write(codec, WM8990_ANTIPOP2, WM8990_SOFTST |
@@ -1197,17 +1195,17 @@ static int wm8990_set_bias_level(struct snd_soc_codec *codec,
 			/* Enable outputs */
 			snd_soc_write(codec, WM8990_POWER_MANAGEMENT_1, 0x1b00);
 
-			msleep(msecs_to_jiffies(50));
+			msleep(50);
 
 			/* Enable VMID at 2x50k */
 			snd_soc_write(codec, WM8990_POWER_MANAGEMENT_1, 0x1f02);
 
-			msleep(msecs_to_jiffies(100));
+			msleep(100);
 
 			/* Enable VREF */
 			snd_soc_write(codec, WM8990_POWER_MANAGEMENT_1, 0x1f03);
 
-			msleep(msecs_to_jiffies(600));
+			msleep(600);
 
 			/* Enable BUFIOEN */
 			snd_soc_write(codec, WM8990_ANTIPOP2, WM8990_SOFTST |
@@ -1252,7 +1250,7 @@ static int wm8990_set_bias_level(struct snd_soc_codec *codec,
 		/* Disable VMID */
 		snd_soc_write(codec, WM8990_POWER_MANAGEMENT_1, 0x1f01);
 
-		msleep(msecs_to_jiffies(300));
+		msleep(300);
 
 		/* Enable all output discharge bits */
 		snd_soc_write(codec, WM8990_ANTIPOP1, WM8990_DIS_LLINE |
@@ -1510,8 +1508,6 @@ static int wm8990_probe(struct platform_device *pdev)
 	struct snd_soc_codec *codec;
 	struct wm8990_priv *wm8990;
 	int ret;
-
-	pr_info("WM8990 Audio Codec %s\n", WM8990_VERSION);
 
 	setup = socdev->codec_data;
 	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);

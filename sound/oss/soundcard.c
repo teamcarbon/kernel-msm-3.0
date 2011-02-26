@@ -86,7 +86,7 @@ int *load_mixer_volumes(char *name, int *levels, int present)
 	int             i, n;
 
 	for (i = 0; i < num_mixer_volumes; i++) {
-		if (strcmp(name, mixer_vols[i].name) == 0) {
+		if (strncmp(name, mixer_vols[i].name, 32) == 0) {
 			if (present)
 				mixer_vols[i].num = i;
 			return mixer_vols[i].levels;
@@ -98,7 +98,7 @@ int *load_mixer_volumes(char *name, int *levels, int present)
 	}
 	n = num_mixer_volumes++;
 
-	strcpy(mixer_vols[n].name, name);
+	strncpy(mixer_vols[n].name, name, 32);
 
 	if (present)
 		mixer_vols[n].num = n;
@@ -210,42 +210,44 @@ static int sound_open(struct inode *inode, struct file *file)
 		printk(KERN_ERR "Invalid minor device %d\n", dev);
 		return -ENXIO;
 	}
+	lock_kernel();
 	switch (dev & 0x0f) {
 	case SND_DEV_CTL:
 		dev >>= 4;
 		if (dev >= 0 && dev < MAX_MIXER_DEV && mixer_devs[dev] == NULL) {
 			request_module("mixer%d", dev);
 		}
+		retval = -ENXIO;
 		if (dev && (dev >= num_mixers || mixer_devs[dev] == NULL))
-			return -ENXIO;
+			break;
 	
 		if (!try_module_get(mixer_devs[dev]->owner))
-			return -ENXIO;
+			break;
+
+		retval = 0;
 		break;
 
 	case SND_DEV_SEQ:
 	case SND_DEV_SEQ2:
-		if ((retval = sequencer_open(dev, file)) < 0)
-			return retval;
+		retval = sequencer_open(dev, file);
 		break;
 
 	case SND_DEV_MIDIN:
-		if ((retval = MIDIbuf_open(dev, file)) < 0)
-			return retval;
+		retval = MIDIbuf_open(dev, file);
 		break;
 
 	case SND_DEV_DSP:
 	case SND_DEV_DSP16:
 	case SND_DEV_AUDIO:
-		if ((retval = audio_open(dev, file)) < 0)
-			return retval;
+		retval = audio_open(dev, file);
 		break;
 
 	default:
 		printk(KERN_ERR "Invalid minor device %d\n", dev);
-		return -ENXIO;
+		retval = -ENXIO;
 	}
 
+	unlock_kernel();
 	return 0;
 }
 

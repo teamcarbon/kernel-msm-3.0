@@ -28,7 +28,6 @@
 #include <linux/mm.h>
 #include <linux/stat.h>
 #include <linux/fcntl.h>
-#include <linux/smp_lock.h>
 #include <linux/swap.h>
 #include <linux/string.h>
 #include <linux/init.h>
@@ -129,7 +128,7 @@ SYSCALL_DEFINE1(uselib, const char __user *, library)
 	if (file->f_path.mnt->mnt_flags & MNT_NOEXEC)
 		goto exit;
 
-	fsnotify_open(file->f_path.dentry);
+	fsnotify_open(file);
 
 	error = -ENOEXEC;
 	if(file->f_op) {
@@ -168,9 +167,13 @@ void acct_arg_size(struct linux_binprm *bprm, unsigned long pages)
 
 	bprm->vma_pages = pages;
 
-	down_write(&mm->mmap_sem);
-	mm->total_vm += diff;
-	up_write(&mm->mmap_sem);
+#ifdef SPLIT_RSS_COUNTING
+	add_mm_counter(mm, MM_ANONPAGES, diff);
+#else
+	spin_lock(&mm->page_table_lock);
+	add_mm_counter(mm, MM_ANONPAGES, diff);
+	spin_unlock(&mm->page_table_lock);
+#endif
 }
 
 struct page *get_arg_page(struct linux_binprm *bprm, unsigned long pos,
@@ -265,6 +268,11 @@ static int __bprm_mm_init(struct linux_binprm *bprm)
 	vma->vm_flags = VM_STACK_FLAGS | VM_STACK_INCOMPLETE_SETUP;
 	vma->vm_page_prot = vm_get_page_prot(vma->vm_flags);
 	INIT_LIST_HEAD(&vma->anon_vma_chain);
+
+	err = security_file_mmap(NULL, 0, 0, 0, vma->vm_start, 1);
+	if (err)
+		goto err;
+
 	err = insert_vm_struct(mm, vma);
 	if (err)
 		goto err;
@@ -383,13 +391,13 @@ err:
 /*
  * count() counts the number of strings in array ARGV.
  */
-static int count(char __user * __user * argv, int max)
+static int count(const char __user * const __user * argv, int max)
 {
 	int i = 0;
 
 	if (argv != NULL) {
 		for (;;) {
-			char __user * p;
+			const char __user * p;
 
 			if (get_user(p, argv))
 				return -EFAULT;
@@ -412,7 +420,7 @@ static int count(char __user * __user * argv, int max)
  * processes's memory to the new process's stack.  The call to get_user_pages()
  * ensures the destination page is created and not swapped out.
  */
-static int copy_strings(int argc, char __user * __user * argv,
+static int copy_strings(int argc, const char __user *const __user *argv,
 			struct linux_binprm *bprm)
 {
 	struct page *kmapped_page = NULL;
@@ -421,7 +429,7 @@ static int copy_strings(int argc, char __user * __user * argv,
 	int ret;
 
 	while (argc-- > 0) {
-		char __user *str;
+		const char __user *str;
 		int len;
 		unsigned long pos;
 
@@ -501,12 +509,13 @@ out:
 /*
  * Like copy_strings, but get argv and its values from kernel memory.
  */
-int copy_strings_kernel(int argc,char ** argv, struct linux_binprm *bprm)
+int copy_strings_kernel(int argc, const char *const *argv,
+			struct linux_binprm *bprm)
 {
 	int r;
 	mm_segment_t oldfs = get_fs();
 	set_fs(KERNEL_DS);
-	r = copy_strings(argc, (char __user * __user *)argv, bprm);
+	r = copy_strings(argc, (const char __user *const  __user *)argv, bprm);
 	set_fs(oldfs);
 	return r;
 }
@@ -688,6 +697,7 @@ int setup_arg_pages(struct linux_binprm *bprm,
 	else
 		stack_base = vma->vm_start - stack_expand;
 #endif
+	current->mm->start_stack = bprm->p;
 	ret = expand_stack(vma, stack_base);
 	if (ret)
 		ret = -EFAULT;
@@ -718,7 +728,7 @@ struct file *open_exec(const char *name)
 	if (file->f_path.mnt->mnt_flags & MNT_NOEXEC)
 		goto exit;
 
-	fsnotify_open(file->f_path.dentry);
+	fsnotify_open(file);
 
 	err = deny_write_access(file);
 	if (err)
@@ -1033,7 +1043,7 @@ EXPORT_SYMBOL(flush_old_exec);
 void setup_new_exec(struct linux_binprm * bprm)
 {
 	int i, ch;
-	char * name;
+	const char *name;
 	char tcomm[sizeof(current->comm)];
 
 	arch_pick_mmap_layout(current->mm);
@@ -1153,7 +1163,7 @@ int check_unsafe_exec(struct linux_binprm *bprm)
 	bprm->unsafe = tracehook_unsafe_exec(p);
 
 	n_fs = 1;
-	write_lock(&p->fs->lock);
+	spin_lock(&p->fs->lock);
 	rcu_read_lock();
 	for (t = next_thread(p); t != p; t = next_thread(t)) {
 		if (t->fs == p->fs)
@@ -1170,7 +1180,7 @@ int check_unsafe_exec(struct linux_binprm *bprm)
 			res = 1;
 		}
 	}
-	write_unlock(&p->fs->lock);
+	spin_unlock(&p->fs->lock);
 
 	return res;
 }
@@ -1352,9 +1362,9 @@ EXPORT_SYMBOL(search_binary_handler);
 /*
  * sys_execve() executes a new program.
  */
-int do_execve(char * filename,
-	char __user *__user *argv,
-	char __user *__user *envp,
+int do_execve(const char * filename,
+	const char __user *const __user *argv,
+	const char __user *const __user *envp,
 	struct pt_regs * regs)
 {
 	struct linux_binprm *bprm;
@@ -1929,13 +1939,7 @@ void do_coredump(long signr, int exit_code, struct pt_regs *regs)
 	 */
 	clear_thread_flag(TIF_SIGPENDING);
 
-	/*
-	 * lock_kernel() because format_corename() is controlled by sysctl, which
-	 * uses lock_kernel()
-	 */
- 	lock_kernel();
 	ispipe = format_corename(corename, signr);
-	unlock_kernel();
 
  	if (ispipe) {
 		int dump_count;
@@ -2043,3 +2047,43 @@ fail_creds:
 fail:
 	return;
 }
+
+/*
+ * Core dumping helper functions.  These are the only things you should
+ * do on a core-file: use only these functions to write out all the
+ * necessary info.
+ */
+int dump_write(struct file *file, const void *addr, int nr)
+{
+	return access_ok(VERIFY_READ, addr, nr) && file->f_op->write(file, addr, nr, &file->f_pos) == nr;
+}
+EXPORT_SYMBOL(dump_write);
+
+int dump_seek(struct file *file, loff_t off)
+{
+	int ret = 1;
+
+	if (file->f_op->llseek && file->f_op->llseek != no_llseek) {
+		if (file->f_op->llseek(file, off, SEEK_CUR) < 0)
+			return 0;
+	} else {
+		char *buf = (char *)get_zeroed_page(GFP_KERNEL);
+
+		if (!buf)
+			return 0;
+		while (off > 0) {
+			unsigned long n = off;
+
+			if (n > PAGE_SIZE)
+				n = PAGE_SIZE;
+			if (!dump_write(file, buf, n)) {
+				ret = 0;
+				break;
+			}
+			off -= n;
+		}
+		free_page((unsigned long)buf);
+	}
+	return ret;
+}
+EXPORT_SYMBOL(dump_seek);

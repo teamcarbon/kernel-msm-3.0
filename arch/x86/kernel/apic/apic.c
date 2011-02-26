@@ -460,7 +460,7 @@ static void lapic_timer_broadcast(const struct cpumask *mask)
 }
 
 /*
- * Setup the local APIC timer for this CPU. Copy the initilized values
+ * Setup the local APIC timer for this CPU. Copy the initialized values
  * of the boot CPU and register the clock event in the framework.
  */
 static void __cpuinit setup_APIC_timer(void)
@@ -1340,6 +1340,14 @@ void __cpuinit end_local_APIC_setup(void)
 
 	setup_apic_nmi_watchdog(NULL);
 	apic_pm_activate();
+
+	/*
+	 * Now that local APIC setup is completed for BP, configure the fault
+	 * handling for interrupt remapping.
+	 */
+	if (!smp_processor_id() && intr_remapping_enabled)
+		enable_drhd_fault_handling();
+
 }
 
 #ifdef CONFIG_X86_X2APIC

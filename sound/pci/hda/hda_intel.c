@@ -126,6 +126,7 @@ MODULE_SUPPORTED_DEVICE("{{Intel, ICH6},"
 			 "{Intel, ICH10},"
 			 "{Intel, PCH},"
 			 "{Intel, CPT},"
+			 "{Intel, PBG},"
 			 "{Intel, SCH},"
 			 "{ATI, SB450},"
 			 "{ATI, SB600},"
@@ -1642,7 +1643,7 @@ static int azx_pcm_hw_free(struct snd_pcm_substream *substream)
 	azx_dev->period_bytes = 0;
 	azx_dev->format_val = 0;
 
-	hinfo->ops.cleanup(hinfo, apcm->codec, substream);
+	snd_hda_codec_cleanup(apcm->codec, hinfo, substream);
 
 	return snd_pcm_lib_free_pages(substream);
 }
@@ -1654,14 +1655,15 @@ static int azx_pcm_prepare(struct snd_pcm_substream *substream)
 	struct azx_dev *azx_dev = get_azx_dev(substream);
 	struct hda_pcm_stream *hinfo = apcm->hinfo[substream->stream];
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	unsigned int bufsize, period_bytes, format_val;
+	unsigned int bufsize, period_bytes, format_val, stream_tag;
 	int err;
 
 	azx_stream_reset(chip, azx_dev);
 	format_val = snd_hda_calc_stream_format(runtime->rate,
 						runtime->channels,
 						runtime->format,
-						hinfo->maxbps);
+						hinfo->maxbps,
+						apcm->codec->spdif_ctls);
 	if (!format_val) {
 		snd_printk(KERN_ERR SFX
 			   "invalid format_val, rate=%d, ch=%d, format=%d\n",
@@ -1695,8 +1697,13 @@ static int azx_pcm_prepare(struct snd_pcm_substream *substream)
 	else
 		azx_dev->fifo_size = 0;
 
-	return hinfo->ops.prepare(hinfo, apcm->codec, azx_dev->stream_tag,
-				  azx_dev->format_val, substream);
+	stream_tag = azx_dev->stream_tag;
+	/* CA-IBG chips need the playback stream starting from 1 */
+	if (chip->driver_type == AZX_DRIVER_CTX &&
+	    stream_tag > chip->capture_streams)
+		stream_tag -= chip->capture_streams;
+	return snd_hda_codec_prepare(apcm->codec, hinfo, stream_tag,
+				     azx_dev->format_val, substream);
 }
 
 static int azx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
@@ -1968,7 +1975,7 @@ static void azx_irq_pending_work(struct work_struct *work)
 		spin_unlock_irq(&chip->reg_lock);
 		if (!pending)
 			return;
-		cond_resched();
+		msleep(1);
 	}
 }
 
@@ -2291,9 +2298,11 @@ static int azx_dev_free(struct snd_device *device)
  */
 static struct snd_pci_quirk position_fix_list[] __devinitdata = {
 	SND_PCI_QUIRK(0x1025, 0x009f, "Acer Aspire 5110", POS_FIX_LPIB),
+	SND_PCI_QUIRK(0x1025, 0x026f, "Acer Aspire 5538", POS_FIX_LPIB),
 	SND_PCI_QUIRK(0x1028, 0x01cc, "Dell D820", POS_FIX_LPIB),
 	SND_PCI_QUIRK(0x1028, 0x01de, "Dell Precision 390", POS_FIX_LPIB),
 	SND_PCI_QUIRK(0x1028, 0x01f6, "Dell Latitude 131L", POS_FIX_LPIB),
+	SND_PCI_QUIRK(0x1028, 0x0470, "Dell Inspiron 1120", POS_FIX_LPIB),
 	SND_PCI_QUIRK(0x103c, 0x306d, "HP dv3", POS_FIX_LPIB),
 	SND_PCI_QUIRK(0x1043, 0x813d, "ASUS P5AD2", POS_FIX_LPIB),
 	SND_PCI_QUIRK(0x1043, 0x81b3, "ASUS", POS_FIX_LPIB),
@@ -2756,6 +2765,8 @@ static DEFINE_PCI_DEVICE_TABLE(azx_ids) = {
 	{ PCI_DEVICE(0x8086, 0x3b57), .driver_data = AZX_DRIVER_ICH },
 	/* CPT */
 	{ PCI_DEVICE(0x8086, 0x1c20), .driver_data = AZX_DRIVER_PCH },
+	/* PBG */
+	{ PCI_DEVICE(0x8086, 0x1d20), .driver_data = AZX_DRIVER_PCH },
 	/* SCH */
 	{ PCI_DEVICE(0x8086, 0x811b), .driver_data = AZX_DRIVER_SCH },
 	/* ATI SB 450/600 */

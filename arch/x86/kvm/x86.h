@@ -65,11 +65,9 @@ static inline int is_paging(struct kvm_vcpu *vcpu)
 	return kvm_read_cr0_bits(vcpu, X86_CR0_PG);
 }
 
-static inline struct kvm_mem_aliases *kvm_aliases(struct kvm *kvm)
+static inline u32 bit(int bitno)
 {
-	return rcu_dereference_check(kvm->arch.aliases,
-			srcu_read_lock_held(&kvm->srcu)
-			|| lockdep_is_held(&kvm->slots_lock));
+	return 1 << (bitno & 31);
 }
 
 void kvm_before_handle_nmi(struct kvm_vcpu *vcpu);

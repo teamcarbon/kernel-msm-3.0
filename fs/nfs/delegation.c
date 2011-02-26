@@ -24,8 +24,6 @@
 
 static void nfs_do_free_delegation(struct nfs_delegation *delegation)
 {
-	if (delegation->cred)
-		put_rpccred(delegation->cred);
 	kfree(delegation);
 }
 
@@ -38,6 +36,10 @@ static void nfs_free_delegation_callback(struct rcu_head *head)
 
 static void nfs_free_delegation(struct nfs_delegation *delegation)
 {
+	if (delegation->cred) {
+		put_rpccred(delegation->cred);
+		delegation->cred = NULL;
+	}
 	call_rcu(&delegation->rcu, nfs_free_delegation_callback);
 }
 
@@ -268,14 +270,6 @@ out:
 	return status;
 }
 
-/* Sync all data to disk upon delegation return */
-static void nfs_msync_inode(struct inode *inode)
-{
-	filemap_fdatawrite(inode->i_mapping);
-	nfs_wb_all(inode);
-	filemap_fdatawait(inode->i_mapping);
-}
-
 /*
  * Basic procedure for returning a delegation to the server
  */
@@ -367,7 +361,7 @@ int nfs_inode_return_delegation(struct inode *inode)
 		delegation = nfs_detach_delegation_locked(nfsi, NULL, clp);
 		spin_unlock(&clp->cl_lock);
 		if (delegation != NULL) {
-			nfs_msync_inode(inode);
+			nfs_wb_all(inode);
 			err = __nfs_inode_return_delegation(inode, delegation, 1);
 		}
 	}
@@ -471,9 +465,7 @@ void nfs_expire_unreferenced_delegations(struct nfs_client *clp)
 /*
  * Asynchronous delegation recall!
  */
-int nfs_async_inode_return_delegation(struct inode *inode, const nfs4_stateid *stateid,
-				      int (*validate_stateid)(struct nfs_delegation *delegation,
-							      const nfs4_stateid *stateid))
+int nfs_async_inode_return_delegation(struct inode *inode, const nfs4_stateid *stateid)
 {
 	struct nfs_client *clp = NFS_SERVER(inode)->nfs_client;
 	struct nfs_delegation *delegation;
@@ -481,7 +473,7 @@ int nfs_async_inode_return_delegation(struct inode *inode, const nfs4_stateid *s
 	rcu_read_lock();
 	delegation = rcu_dereference(NFS_I(inode)->delegation);
 
-	if (!validate_stateid(delegation, stateid)) {
+	if (!clp->cl_mvops->validate_stateid(delegation, stateid)) {
 		rcu_read_unlock();
 		return -ENOENT;
 	}

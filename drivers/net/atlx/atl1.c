@@ -1251,6 +1251,12 @@ static void atl1_free_ring_resources(struct atl1_adapter *adapter)
 
 	rrd_ring->desc = NULL;
 	rrd_ring->dma = 0;
+
+	adapter->cmb.dma = 0;
+	adapter->cmb.cmb = NULL;
+
+	adapter->smb.dma = 0;
+	adapter->smb.smb = NULL;
 }
 
 static void atl1_setup_mac_ctrl(struct atl1_adapter *adapter)
@@ -3497,6 +3503,8 @@ static int atl1_set_ringparam(struct net_device *netdev,
 	struct atl1_rfd_ring rfd_old, rfd_new;
 	struct atl1_rrd_ring rrd_old, rrd_new;
 	struct atl1_ring_header rhdr_old, rhdr_new;
+	struct atl1_smb smb;
+	struct atl1_cmb cmb;
 	int err;
 
 	tpd_old = adapter->tpd_ring;
@@ -3537,11 +3545,19 @@ static int atl1_set_ringparam(struct net_device *netdev,
 		adapter->rrd_ring = rrd_old;
 		adapter->tpd_ring = tpd_old;
 		adapter->ring_header = rhdr_old;
+		/*
+		 * Save SMB and CMB, since atl1_free_ring_resources
+		 * will clear them.
+		 */
+		smb = adapter->smb;
+		cmb = adapter->cmb;
 		atl1_free_ring_resources(adapter);
 		adapter->rfd_ring = rfd_new;
 		adapter->rrd_ring = rrd_new;
 		adapter->tpd_ring = tpd_new;
 		adapter->ring_header = rhdr_new;
+		adapter->smb = smb;
+		adapter->cmb = cmb;
 
 		err = atl1_up(adapter);
 		if (err)
