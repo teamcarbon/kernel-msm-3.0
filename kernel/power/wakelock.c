@@ -57,25 +57,20 @@ static int wait_for_wakeup;
 int get_expired_time(struct wake_lock *lock, ktime_t *expire_time)
 {
 	struct timespec ts;
-	struct timespec kt;
 	struct timespec tomono;
 	struct timespec delta;
-	unsigned long seq;
 	long timeout;
 
 	if (!(lock->flags & WAKE_LOCK_AUTO_EXPIRE))
 		return 0;
-	do {
-		seq = read_seqbegin(&xtime_lock);
-		timeout = lock->expires - jiffies;
-		if (timeout > 0)
-			return 0;
-		kt = current_kernel_time();
-		tomono = wall_to_monotonic;
-	} while (read_seqretry(&xtime_lock, seq));
+	ktime_get_ts(&tomono);
+	timeout = lock->expires - jiffies;
+	if (timeout > 0){
+		return 0;
+	}
 	jiffies_to_timespec(-timeout, &delta);
-	set_normalized_timespec(&ts, kt.tv_sec + tomono.tv_sec - delta.tv_sec,
-				kt.tv_nsec + tomono.tv_nsec - delta.tv_nsec);
+	set_normalized_timespec(&ts, tomono.tv_sec - delta.tv_sec,
+				tomono.tv_nsec - delta.tv_nsec);
 	*expire_time = timespec_to_ktime(ts);
 	return 1;
 }
