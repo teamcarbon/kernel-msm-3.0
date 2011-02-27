@@ -1325,7 +1325,6 @@ static void __init sapphire_fixup(struct machine_desc *desc, struct tag *tags,
 
 	mi->nr_banks = 1;
 	mi->bank[0].start = PHYS_OFFSET;
-	mi->bank[0].node = PHYS_TO_NID(PHYS_OFFSET);
 #if     defined(CONFIG_MSM_AMSS_SUPPORT_256MB_EBI1)
         if (smi_sz == 32) {
                 switch (sapphire_get_die_size()) {
@@ -1338,7 +1337,6 @@ static void __init sapphire_fixup(struct machine_desc *desc, struct tag *tags,
 #endif
                         mi->bank[1].start = 0x20000000;
                         mi->bank[1].size = 0x5800000;
-                        mi->bank[1].node = PHYS_TO_NID(0x20000000);
                         break;
                 case EBI1_MONO_256MB:
                         mi->nr_banks = 2;
@@ -1349,7 +1347,6 @@ static void __init sapphire_fixup(struct machine_desc *desc, struct tag *tags,
 #endif
                         mi->bank[1].start = 0x18000000;
                         mi->bank[1].size = 0x5800000;
-                        mi->bank[1].node = PHYS_TO_NID(0x18000000);
                         break;
                 default:
                         mi->bank[0].size = MSM_EBI_SMI32_256MB_SIZE;
@@ -1377,7 +1374,6 @@ static void __init sapphire_fixup(struct machine_desc *desc, struct tag *tags,
 #endif
 			mi->bank[1].start = 0x20000000;
 			mi->bank[1].size = 0x5800000;
-			mi->bank[1].node = PHYS_TO_NID(0x20000000);
 			break;
 		case EBI1_MONO_256MB:
 			mi->nr_banks = 2;
@@ -1388,7 +1384,6 @@ static void __init sapphire_fixup(struct machine_desc *desc, struct tag *tags,
 #endif
 			mi->bank[1].start = 0x18000000;
 			mi->bank[1].size = 0x5800000;
-			mi->bank[1].node = PHYS_TO_NID(0x18000000);
 			break;
 		default:
 			mi->bank[0].size = (84*1024*1024);
@@ -1399,7 +1394,6 @@ static void __init sapphire_fixup(struct machine_desc *desc, struct tag *tags,
 		mi->bank[0].size = SMI64_MSM_LINUX_SIZE;	//(101*1024*1024);
 		mi->bank[1].start = SMI64_MSM_LINUX2_BASE;
 		mi->bank[1].size = SMI64_MSM_LINUX2_SIZE;
-		mi->bank[1].node = PHYS_TO_NID(SMI64_MSM_LINUX2_BASE);
 	} else {
 		printk(KERN_ERR "can not get smi size\n");
 

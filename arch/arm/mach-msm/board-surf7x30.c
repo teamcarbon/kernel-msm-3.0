@@ -462,7 +462,6 @@ static void __init surf7x30_fixup(struct machine_desc *desc, struct tag *tags,
 {
 	mi->nr_banks = 1;
 	mi->bank[0].start = PHYS_OFFSET;
-	mi->bank[0].node = PHYS_TO_NID(PHYS_OFFSET);
 	mi->bank[0].size = (51*1024*1024);
 }
 
