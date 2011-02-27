@@ -17,7 +17,6 @@
  *
  */
 
-#include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/list.h>
@@ -110,7 +109,7 @@ static unsigned long max_axi_rate;
 
 /*
  * ACPU speed table. Complete table is shown but certain speeds are commented
- * out to optimized speed switching. Initalize loops_per_jiffy to 0.
+ * out to optimized speed switching. Initialize loops_per_jiffy to 0.
  *
  * Table stepping up/down is optimized for 256mhz jumps while staying on the
  * same PLL.
@@ -583,7 +582,7 @@ uint32_t acpuclk_get_switch_time(void)
  * Clock driver initialization
  *---------------------------------------------------------------------------*/
 
-/* Initalize the lpj field in the acpu_freq_tbl. */
+/* Initialize the lpj field in the acpu_freq_tbl. */
 static void __init lpj_init(void)
 {
 	int i;

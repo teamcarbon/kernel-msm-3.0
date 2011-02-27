@@ -38,8 +38,7 @@ int ath_beaconq_config(struct ath_softc *sc)
 		qi.tqi_cwmax = 0;
 	} else {
 		/* Adhoc mode; important thing is to use 2x cwmin. */
-		qnum = ath_tx_get_qnum(sc, ATH9K_TX_QUEUE_DATA,
-				       ATH9K_WME_AC_BE);
+		qnum = sc->tx.hwq_map[WME_AC_BE];
 		ath9k_hw_get_txq_props(ah, qnum, &qi_be);
 		qi.tqi_aifs = qi_be.tqi_aifs;
 		qi.tqi_cwmin = 4*qi_be.tqi_cwmin;
@@ -367,7 +366,7 @@ void ath_beacon_tasklet(unsigned long data)
 			ath_print(common, ATH_DBG_BEACON,
 				  "beacon is officially stuck\n");
 			sc->sc_flags |= SC_OP_TSF_RESET;
-			ath_reset(sc, false);
+			ath_reset(sc, true);
 		}
 
 		return;

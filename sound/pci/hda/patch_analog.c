@@ -1276,6 +1276,7 @@ static int patch_ad1986a(struct hda_codec *codec)
 	spec->multiout.no_share_stream = 1;
 
 	codec->no_trigger_sense = 1;
+	codec->no_sticky_stream = 1;
 
 	return 0;
 }
@@ -1463,6 +1464,7 @@ static int patch_ad1983(struct hda_codec *codec)
 	codec->patch_ops = ad198x_patch_ops;
 
 	codec->no_trigger_sense = 1;
+	codec->no_sticky_stream = 1;
 
 	return 0;
 }
@@ -1917,6 +1919,7 @@ static int patch_ad1981(struct hda_codec *codec)
 	}
 
 	codec->no_trigger_sense = 1;
+	codec->no_sticky_stream = 1;
 
 	return 0;
 }
@@ -3235,6 +3238,7 @@ static int patch_ad1988(struct hda_codec *codec)
 	spec->vmaster_nid = 0x04;
 
 	codec->no_trigger_sense = 1;
+	codec->no_sticky_stream = 1;
 
 	return 0;
 }
@@ -3449,6 +3453,7 @@ static int patch_ad1884(struct hda_codec *codec)
 	codec->patch_ops = ad198x_patch_ops;
 
 	codec->no_trigger_sense = 1;
+	codec->no_sticky_stream = 1;
 
 	return 0;
 }
@@ -3663,7 +3668,12 @@ static int patch_ad1984(struct hda_codec *codec)
 		codec->patch_ops.build_pcms = ad1984_build_pcms;
 		break;
 	case AD1984_THINKPAD:
-		spec->multiout.dig_out_nid = AD1884_SPDIF_OUT;
+		if (codec->subsystem_id == 0x17aa20fb) {
+			/* Thinpad X300 does not have the ability to do SPDIF,
+			   or attach to docking station to use SPDIF */
+			spec->multiout.dig_out_nid = 0;
+		} else
+			spec->multiout.dig_out_nid = AD1884_SPDIF_OUT;
 		spec->input_mux = &ad1984_thinkpad_capture_source;
 		spec->mixers[0] = ad1984_thinkpad_mixers;
 		spec->init_verbs[spec->num_init_verbs++] = ad1984_thinkpad_init_verbs;
@@ -4417,6 +4427,7 @@ static int patch_ad1884a(struct hda_codec *codec)
 	}
 
 	codec->no_trigger_sense = 1;
+	codec->no_sticky_stream = 1;
 
 	return 0;
 }
@@ -4756,6 +4767,7 @@ static int patch_ad1882(struct hda_codec *codec)
 	}
 
 	codec->no_trigger_sense = 1;
+	codec->no_sticky_stream = 1;
 
 	return 0;
 }

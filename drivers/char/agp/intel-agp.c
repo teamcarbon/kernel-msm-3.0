@@ -839,6 +839,7 @@ static int __devinit intel_gmch_probe(struct pci_dev *pdev,
 				      struct agp_bridge_data *bridge)
 {
 	int i, mask;
+
 	bridge->driver = NULL;
 
 	for (i = 0; intel_agp_chipsets[i].name != NULL; i++) {
@@ -929,6 +930,11 @@ static int __devinit agp_intel_probe(struct pci_dev *pdev,
 	* The following fixes the case where the BIOS has "forgotten" to
 	* provide an address range for the GART.
 	* 20030610 - hamish@zot.org
+	* This happens before pci_enable_device() intentionally;
+	* calling pci_enable_device() before assigning the resource
+	* will result in the GART being disabled on machines with such
+	* BIOSs (the GART ends up with a BAR starting at 0, which
+	* conflicts a lot of other devices).
 	*/
 	r = &pdev->resource[0];
 	if (!r->start && r->end) {

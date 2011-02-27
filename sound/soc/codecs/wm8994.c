@@ -95,6 +95,7 @@ struct wm8994_priv {
 
 	struct wm8994_micdet micdet[2];
 
+	int revision;
 	struct wm8994_pdata *pdata;
 };
 
@@ -1677,6 +1678,26 @@ static struct {
 
 static int wm8994_readable(unsigned int reg)
 {
+	switch (reg) {
+	case WM8994_GPIO_1:
+	case WM8994_GPIO_2:
+	case WM8994_GPIO_3:
+	case WM8994_GPIO_4:
+	case WM8994_GPIO_5:
+	case WM8994_GPIO_6:
+	case WM8994_GPIO_7:
+	case WM8994_GPIO_8:
+	case WM8994_GPIO_9:
+	case WM8994_GPIO_10:
+	case WM8994_GPIO_11:
+	case WM8994_INTERRUPT_STATUS_1:
+	case WM8994_INTERRUPT_STATUS_2:
+	case WM8994_INTERRUPT_RAW_STATUS_2:
+		return 1;
+	default:
+		break;
+	}
+
 	if (reg >= ARRAY_SIZE(access_masks))
 		return 0;
 	return access_masks[reg].readable != 0;
@@ -2341,6 +2362,20 @@ SOC_DAPM_SINGLE("AIF2 Switch", WM8994_AIF1_ADC1_RIGHT_MIXER_ROUTING,
 		0, 1, 0),
 };
 
+static const struct snd_kcontrol_new aif1adc2l_mix[] = {
+SOC_DAPM_SINGLE("DMIC Switch", WM8994_AIF1_ADC2_LEFT_MIXER_ROUTING,
+		1, 1, 0),
+SOC_DAPM_SINGLE("AIF2 Switch", WM8994_AIF1_ADC2_LEFT_MIXER_ROUTING,
+		0, 1, 0),
+};
+
+static const struct snd_kcontrol_new aif1adc2r_mix[] = {
+SOC_DAPM_SINGLE("DMIC Switch", WM8994_AIF1_ADC2_RIGHT_MIXER_ROUTING,
+		1, 1, 0),
+SOC_DAPM_SINGLE("AIF2 Switch", WM8994_AIF1_ADC2_RIGHT_MIXER_ROUTING,
+		0, 1, 0),
+};
+
 static const struct snd_kcontrol_new aif2dac2l_mix[] = {
 SOC_DAPM_SINGLE("Right Sidetone Switch", WM8994_DAC2_LEFT_MIXER_ROUTING,
 		5, 1, 0),
@@ -2472,6 +2507,7 @@ static const struct snd_kcontrol_new aif3adc_mux =
 static const struct snd_soc_dapm_widget wm8994_dapm_widgets[] = {
 SND_SOC_DAPM_INPUT("DMIC1DAT"),
 SND_SOC_DAPM_INPUT("DMIC2DAT"),
+SND_SOC_DAPM_INPUT("Clock"),
 
 SND_SOC_DAPM_SUPPLY("CLK_SYS", SND_SOC_NOPM, 0, 0, clk_sys_event,
 		    SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
@@ -2483,18 +2519,18 @@ SND_SOC_DAPM_SUPPLY("DSPINTCLK", WM8994_CLOCKING_1, 1, 0, NULL, 0),
 SND_SOC_DAPM_SUPPLY("AIF1CLK", WM8994_AIF1_CLOCKING_1, 0, 0, NULL, 0),
 SND_SOC_DAPM_SUPPLY("AIF2CLK", WM8994_AIF2_CLOCKING_1, 0, 0, NULL, 0),
 
-SND_SOC_DAPM_AIF_OUT("AIF1ADC1L", "AIF1 Capture",
+SND_SOC_DAPM_AIF_OUT("AIF1ADC1L", NULL,
 		     0, WM8994_POWER_MANAGEMENT_4, 9, 0),
-SND_SOC_DAPM_AIF_OUT("AIF1ADC1R", "AIF1 Capture",
+SND_SOC_DAPM_AIF_OUT("AIF1ADC1R", NULL,
 		     0, WM8994_POWER_MANAGEMENT_4, 8, 0),
 SND_SOC_DAPM_AIF_IN("AIF1DAC1L", NULL, 0,
 		    WM8994_POWER_MANAGEMENT_5, 9, 0),
 SND_SOC_DAPM_AIF_IN("AIF1DAC1R", NULL, 0,
 		    WM8994_POWER_MANAGEMENT_5, 8, 0),
 
-SND_SOC_DAPM_AIF_OUT("AIF1ADC2L", "AIF1 Capture",
+SND_SOC_DAPM_AIF_OUT("AIF1ADC2L", NULL,
 		     0, WM8994_POWER_MANAGEMENT_4, 11, 0),
-SND_SOC_DAPM_AIF_OUT("AIF1ADC2R", "AIF1 Capture",
+SND_SOC_DAPM_AIF_OUT("AIF1ADC2R", NULL,
 		     0, WM8994_POWER_MANAGEMENT_4, 10, 0),
 SND_SOC_DAPM_AIF_IN("AIF1DAC2L", NULL, 0,
 		    WM8994_POWER_MANAGEMENT_5, 11, 0),
@@ -2505,6 +2541,11 @@ SND_SOC_DAPM_MIXER("AIF1ADC1L Mixer", SND_SOC_NOPM, 0, 0,
 		   aif1adc1l_mix, ARRAY_SIZE(aif1adc1l_mix)),
 SND_SOC_DAPM_MIXER("AIF1ADC1R Mixer", SND_SOC_NOPM, 0, 0,
 		   aif1adc1r_mix, ARRAY_SIZE(aif1adc1r_mix)),
+
+SND_SOC_DAPM_MIXER("AIF1ADC2L Mixer", SND_SOC_NOPM, 0, 0,
+		   aif1adc2l_mix, ARRAY_SIZE(aif1adc2l_mix)),
+SND_SOC_DAPM_MIXER("AIF1ADC2R Mixer", SND_SOC_NOPM, 0, 0,
+		   aif1adc2r_mix, ARRAY_SIZE(aif1adc2r_mix)),
 
 SND_SOC_DAPM_MIXER("AIF2DAC2L Mixer", SND_SOC_NOPM, 0, 0,
 		   aif2dac2l_mix, ARRAY_SIZE(aif2dac2l_mix)),
@@ -2530,6 +2571,7 @@ SND_SOC_DAPM_AIF_IN("AIF2DACR", NULL, 0,
 
 SND_SOC_DAPM_AIF_IN("AIF1DACDAT", "AIF1 Playback", 0, SND_SOC_NOPM, 0, 0),
 SND_SOC_DAPM_AIF_IN("AIF2DACDAT", "AIF2 Playback", 0, SND_SOC_NOPM, 0, 0),
+SND_SOC_DAPM_AIF_OUT("AIF1ADCDAT", "AIF1 Capture", 0, SND_SOC_NOPM, 0, 0),
 SND_SOC_DAPM_AIF_OUT("AIF2ADCDAT", "AIF2 Capture", 0, SND_SOC_NOPM, 0, 0),
 
 SND_SOC_DAPM_MUX("AIF1DAC Mux", SND_SOC_NOPM, 0, 0, &aif1dac_mux),
@@ -2668,6 +2710,14 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{ "AIF1ADC1R Mixer", "ADC/DMIC Switch", "ADCR Mux" },
 	{ "AIF1ADC1R Mixer", "AIF2 Switch", "AIF2DACR" },
 
+	{ "AIF1ADC2L", NULL, "AIF1ADC2L Mixer" },
+	{ "AIF1ADC2L Mixer", "DMIC Switch", "DMIC2L" },
+	{ "AIF1ADC2L Mixer", "AIF2 Switch", "AIF2DACL" },
+
+	{ "AIF1ADC2R", NULL, "AIF1ADC2R Mixer" },
+	{ "AIF1ADC2R Mixer", "DMIC Switch", "DMIC2R" },
+	{ "AIF1ADC2R Mixer", "AIF2 Switch", "AIF2DACR" },
+
 	/* Pin level routing for AIF3 */
 	{ "AIF1DAC1L", NULL, "AIF1DAC Mux" },
 	{ "AIF1DAC1R", NULL, "AIF1DAC Mux" },
@@ -2716,6 +2766,11 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{ "AIF2DAC2R Mixer", "AIF1.1 Switch", "AIF1DAC1R" },
 	{ "AIF2DAC2R Mixer", "Left Sidetone Switch", "Left Sidetone" },
 	{ "AIF2DAC2R Mixer", "Right Sidetone Switch", "Right Sidetone" },
+
+	{ "AIF1ADCDAT", NULL, "AIF1ADC1L" },
+	{ "AIF1ADCDAT", NULL, "AIF1ADC1R" },
+	{ "AIF1ADCDAT", NULL, "AIF1ADC2L" },
+	{ "AIF1ADCDAT", NULL, "AIF1ADC2R" },
 
 	{ "AIF2ADCDAT", NULL, "AIF2ADC Mux" },
 
@@ -2865,6 +2920,7 @@ static int wm8994_set_fll(struct snd_soc_dai *dai, int id, int src,
 		/* Allow no source specification when stopping */
 		if (freq_out)
 			return -EINVAL;
+		src = wm8994->fll[id].src;
 		break;
 	case WM8994_FLL_SRC_MCLK1:
 	case WM8994_FLL_SRC_MCLK2:
@@ -2946,11 +3002,14 @@ static int wm8994_set_fll(struct snd_soc_dai *dai, int id, int src,
 	return 0;
 }
 
+static int opclk_divs[] = { 10, 20, 30, 40, 55, 60, 80, 120, 160 };
+
 static int wm8994_set_dai_sysclk(struct snd_soc_dai *dai,
 		int clk_id, unsigned int freq, int dir)
 {
 	struct snd_soc_codec *codec = dai->codec;
 	struct wm8994_priv *wm8994 = snd_soc_codec_get_drvdata(codec);
+	int i;
 
 	switch (dai->id) {
 	case 1:
@@ -2988,6 +3047,25 @@ static int wm8994_set_dai_sysclk(struct snd_soc_dai *dai,
 		dev_dbg(dai->dev, "AIF%d using FLL2\n", dai->id);
 		break;
 
+	case WM8994_SYSCLK_OPCLK:
+		/* Special case - a division (times 10) is given and
+		 * no effect on main clocking. 
+		 */
+		if (freq) {
+			for (i = 0; i < ARRAY_SIZE(opclk_divs); i++)
+				if (opclk_divs[i] == freq)
+					break;
+			if (i == ARRAY_SIZE(opclk_divs))
+				return -EINVAL;
+			snd_soc_update_bits(codec, WM8994_CLOCKING_2,
+					    WM8994_OPCLK_DIV_MASK, i);
+			snd_soc_update_bits(codec, WM8994_POWER_MANAGEMENT_2,
+					    WM8994_OPCLK_ENA, WM8994_OPCLK_ENA);
+		} else {
+			snd_soc_update_bits(codec, WM8994_POWER_MANAGEMENT_2,
+					    WM8994_OPCLK_ENA, 0);
+		}
+
 	default:
 		return -EINVAL;
 	}
@@ -3000,6 +3078,8 @@ static int wm8994_set_dai_sysclk(struct snd_soc_dai *dai,
 static int wm8994_set_bias_level(struct snd_soc_codec *codec,
 				 enum snd_soc_bias_level level)
 {
+	struct wm8994_priv *wm8994 = snd_soc_codec_get_drvdata(codec);
+
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 		break;
@@ -3012,11 +3092,16 @@ static int wm8994_set_bias_level(struct snd_soc_codec *codec,
 
 	case SND_SOC_BIAS_STANDBY:
 		if (codec->bias_level == SND_SOC_BIAS_OFF) {
-			/* Tweak DC servo configuration for improved
-			 * performance. */
-			snd_soc_write(codec, 0x102, 0x3);
-			snd_soc_write(codec, 0x56, 0x3);
-			snd_soc_write(codec, 0x102, 0);
+			/* Tweak DC servo and DSP configuration for
+			 * improved performance. */
+			if (wm8994->revision < 4) {
+				/* Tweak DC servo and DSP configuration for
+				 * improved performance. */
+				snd_soc_write(codec, 0x102, 0x3);
+				snd_soc_write(codec, 0x56, 0x3);
+				snd_soc_write(codec, 0x817, 0);
+				snd_soc_write(codec, 0x102, 0);
+			}
 
 			/* Discharge LINEOUT1 & 2 */
 			snd_soc_update_bits(codec, WM8994_ANTIPOP_1,
@@ -3407,7 +3492,7 @@ static int wm8994_set_tristate(struct snd_soc_dai *codec_dai, int tristate)
 	else
 		val = 0;
 
-	return snd_soc_update_bits(codec, reg, mask, reg);
+	return snd_soc_update_bits(codec, reg, mask, val);
 }
 
 #define WM8994_RATES SNDRV_PCM_RATE_8000_96000
@@ -3849,7 +3934,6 @@ static int wm8994_codec_probe(struct platform_device *pdev)
 	struct wm8994_priv *wm8994;
 	struct snd_soc_codec *codec;
 	int i;
-	u16 rev;
 
 	if (wm8994_codec) {
 		dev_err(&pdev->dev, "Another WM8994 is registered\n");
@@ -3903,8 +3987,8 @@ static int wm8994_codec_probe(struct platform_device *pdev)
 			wm8994->reg_cache[i] = 0;
 
 	/* Set revision-specific configuration */
-	rev = snd_soc_read(codec, WM8994_CHIP_REVISION);
-	switch (rev) {
+	wm8994->revision = snd_soc_read(codec, WM8994_CHIP_REVISION);
+	switch (wm8994->revision) {
 	case 2:
 	case 3:
 		wm8994->hubs.dcs_codes = -5;
@@ -4003,6 +4087,11 @@ static int wm8994_codec_probe(struct platform_device *pdev)
 	snd_soc_update_bits(codec, WM8994_AIF2_DAC_FILTERS_2,
 			    1 << WM8994_AIF2DAC_3D_GAIN_SHIFT,
 			    1 << WM8994_AIF2DAC_3D_GAIN_SHIFT);
+
+	/* Unconditionally enable AIF1 ADC TDM mode; it only affects
+	 * behaviour on idle TDM clock cycles. */
+	snd_soc_update_bits(codec, WM8994_AIF1_CONTROL_1,
+			    WM8994_AIF1ADC_TDM, WM8994_AIF1ADC_TDM);
 
 	wm8994_update_class_w(codec);
 
