@@ -130,13 +130,16 @@ static DEFINE_IDA(cic_index_ida);
 
 #define bfq_sample_valid(samples)	((samples) > 80)
 
+#define rq_is_meta(rq) ((rq)->cmd_flags & REQ_META)
+
 /*
  * We regard a request as SYNC, if either it's a read or has the SYNC bit
  * set (in which case it could also be a direct WRITE).
  */
 static inline int bfq_bio_sync(struct bio *bio)
 {
-	if (bio_data_dir(bio) == READ || bio_rw_flagged(bio, BIO_RW_SYNCIO))
+	const bool bio_sync = !!(bio->bi_rw & REQ_SYNC);
+	if (bio_data_dir(bio) == READ || bio_sync)
 		return 1;
 
 	return 0;
@@ -1776,7 +1779,7 @@ static int bfq_may_queue(struct request_queue *q, int rw)
 	if (cic == NULL)
 		return ELV_MQUEUE_MAY;
 
-	bfqq = cic_to_bfqq(cic, rw & REQ_RW_SYNC);
+	bfqq = cic_to_bfqq(cic, rw & REQ_SYNC);
 	if (bfqq != NULL) {
 		bfq_init_prio_data(bfqq, cic->ioc);
 		bfq_prio_boost(bfqq);
