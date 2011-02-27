@@ -333,7 +333,6 @@ config TOUCHSCREEN_PENMOUNT
 	  To compile this driver as a module, choose M here: the
 	  module will be called penmount.
 
-<<<<<<< HEAD:drivers/input/touchscreen/Kconfig
 config TOUCHSCREEN_MSM
 	bool "Qualcomm MSM touchscreen controller"
 	depends on ARCH_MSM
@@ -342,7 +341,7 @@ config TOUCHSCREEN_MSM
 	  Say Y here if you have a 4-wire resistive touchscreen panel
 	  connected to the TSSC touchscreen controller on a
 	  Qualcomm MSM/QSD based SoC.
-=======
+
 config TOUCHSCREEN_QT602240
 	tristate "QT602240 I2C Touchscreen"
 	depends on I2C
@@ -354,7 +353,6 @@ config TOUCHSCREEN_QT602240
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called qt602240_ts.
->>>>>>> v2.6.35.10-updateto-v2.6.36.4:drivers/input/touchscreen/Kconfig
 
 config TOUCHSCREEN_MIGOR
 	tristate "Renesas MIGO-R touchscreen"

@@ -1381,14 +1381,13 @@ config HW_PERF_EVENTS
 	  Enable hardware performance counter support for perf events. If
 	  disabled, perf events will use software events only.
 
-<<<<<<< HEAD:arch/arm/Kconfig
 config VMALLOC_RESERVE
 	hex "Reserved vmalloc space"
 	default 0x08000000
 	depends on MMU
 	help
 	  Reserved vmalloc space if not specified on the kernel commandline.
-=======
+
 config SPARSE_IRQ
 	def_bool n
 	help
@@ -1397,7 +1396,6 @@ config SPARSE_IRQ
 	  the irq_desc then maps directly on to. Systems with a high
 	  number of off-chip IRQs will want to treat this as
 	  experimental until they have been independently verified.
->>>>>>> v2.6.35.10-updateto-v2.6.36.4:arch/arm/Kconfig
 
 source "mm/Kconfig"
 
