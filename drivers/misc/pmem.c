@@ -438,7 +438,8 @@ static int pmem_allocate(int id, unsigned long len)
 	return best_fit;
 }
 
-static pgprot_t phys_mem_access_prot(struct file *file, pgprot_t vma_prot)
+static pgprot_t phys_local_mem_access_prot(struct file *file, unsigned long pfn,
+                                     unsigned long size, pgprot_t vma_prot)
 {
 	int id = get_id(file);
 #ifdef pgprot_noncached
@@ -628,7 +629,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	}
 
 	vma->vm_pgoff = pmem_start_addr(id, data) >> PAGE_SHIFT;
-	vma->vm_page_prot = phys_mem_access_prot(file, vma->vm_page_prot);
+	vma->vm_page_prot = phys_local_mem_access_prot(file, 0, 0, vma->vm_page_prot);
 
 	if (data->flags & PMEM_FLAGS_CONNECTED) {
 		struct pmem_region_node *region_node;

@@ -172,7 +172,6 @@ int mdp_hw_init(struct mdp_info *mdp)
 int mdp_hw_init(struct mdp_info *mdp)
 {
 	int n;
-	int lcdc_enabled;
 
 	mdp_irq_mask = 0;
 
