@@ -364,6 +364,9 @@ struct usb_composite_dev {
 	/* current connected state for sw_connected */
 	bool				connected;
 
+	/* used by usb_composite_force_reset to avoid signalling switch
+	 * changes */
+	bool                            mute_switch;
 	struct work_struct switch_work;
 };
 
