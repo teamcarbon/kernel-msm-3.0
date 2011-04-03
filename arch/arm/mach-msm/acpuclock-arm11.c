@@ -52,7 +52,9 @@
 #define PERF_SWITCH_DEBUG 0
 #define PERF_SWITCH_STEP_DEBUG 0
 
-module_param_named(force_turbo, force_turbo, int, S_IRUGO | S_IWUSR | S_IWGRP);
+/* 
+ * module_param_named(force_turbo, force_turbo, int, S_IRUGO | S_IWUSR | S_IWGRP);
+ */
 
 struct clock_state
 {
