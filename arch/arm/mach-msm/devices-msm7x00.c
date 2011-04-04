@@ -25,6 +25,7 @@
 #include "proc_comm.h"
 
 #include <asm/mach/flash.h>
+#include <asm/mach/mmc.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
 
@@ -437,7 +438,7 @@ static struct platform_device *msm_sdcc_devices[] __initdata = {
 };
 
 int __init msm_add_sdcc(unsigned int controller,
-			struct msm_mmc_platform_data *plat,
+			struct mmc_platform_data *plat,
 			unsigned int stat_irq, unsigned long stat_irq_flags)
 {
 	struct platform_device	*pdev;
