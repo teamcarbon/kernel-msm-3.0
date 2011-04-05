@@ -730,9 +730,10 @@ uint32_t mddi_remote_read(struct msm_mddi_client_data *cdata, uint32_t reg)
 
 	do {
 		init_completion(&ri.done);
-		if (mddi->type == MSM_MDP_MDDI_TYPE_II)
+		if (mddi->type == MSM_MDP_MDDI_TYPE_II){
 			mddi_set_auto_hibernate(&mddi->client_data, 0);
-		mddi_writel(MDDI_CMD_SEND_RTD, CMD);
+			mddi_writel(MDDI_CMD_SEND_RTD, CMD);
+		}
 		mddi->reg_read = &ri;
 		mddi_writel(mddi->reg_read_addr, PRI_PTR);
 
