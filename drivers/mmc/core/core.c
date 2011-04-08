@@ -1436,8 +1436,8 @@ void mmc_rescan(struct work_struct *work)
 	int err;
 	unsigned long flags;
 	int extend_wakelock = 0;
-	int i;
 #ifndef CONFIG_MMC_USE_ONLY_HOST_DEFINED_FREQUENCY
+	int i;
 	const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
 #endif
 
