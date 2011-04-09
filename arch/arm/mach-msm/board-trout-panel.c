@@ -585,6 +585,7 @@ static struct msm_mddi_platform_data mddi_pdata = {
 	.vsync_irq = MSM_GPIO_TO_INT(VSYNC_GPIO),
 	.fb_resource = resources_msm_fb,
 	.num_clients = 1,
+    .type = MSM_MDP_MDDI_TYPE_I,
 	.client_platform_data = {
 		{
 			.product_id = (0xd263 << 16 | 0),
