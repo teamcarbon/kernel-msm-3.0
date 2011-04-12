@@ -8422,7 +8422,10 @@ void sched_destroy_group(struct task_group *tg)
 	spin_lock_irqsave(&task_group_lock, flags);
 	for_each_possible_cpu(i) {
 		unregister_fair_sched_group(tg, i);
-		unregister_rt_sched_group(tg, i);
+#ifdef CONFIG_RT_GROUP_SCHED
+		if(!task_group_is_autogroup(tg))
+			unregister_rt_sched_group(tg, i);
+#endif
 	}
 	list_del_rcu(&tg->list);
 	list_del_rcu(&tg->siblings);
