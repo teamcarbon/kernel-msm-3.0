@@ -366,10 +366,13 @@ static void mdp_dmas_to_mddi(void *priv, uint32_t addr, uint32_t stride,
 
 	dma2_cfg |= DMA_DITHER_EN;
 
+#ifndef CONFIG_ARCH_MSM_ARM11
 	if (mdp->mdp_dev.color_format == MSM_MDP_OUT_IF_FMT_RGB565) {
 		dma2_cfg |= DMA_DSTC0G_6BITS | DMA_DSTC1B_5BITS | DMA_DSTC2R_5BITS;
 		video_packet_parameter = MDDI_VDO_PACKET_DESC_RGB565;
-	} else if (mdp->mdp_dev.color_format == MSM_MDP_OUT_IF_FMT_RGB666) {
+	} else if (mdp->mdp_dev.color_format == MSM_MDP_OUT_IF_FMT_RGB666)
+#endif
+	{
 		dma2_cfg |= DMA_DSTC0G_6BITS | DMA_DSTC1B_6BITS | DMA_DSTC2R_6BITS;
 		video_packet_parameter = MDDI_VDO_PACKET_DESC_RGB666;
 	}
@@ -430,10 +433,13 @@ static void mdp_dma_to_mddi(void *priv, uint32_t addr, uint32_t stride,
 	dma2_cfg |= DMA_DITHER_EN;
 #endif
 
+#ifndef CONFIG_ARCH_MSM_ARM11
 	if (mdp->mdp_dev.color_format == MSM_MDP_OUT_IF_FMT_RGB565) {
 		dma2_cfg |= DMA_DSTC0G_6BITS | DMA_DSTC1B_5BITS | DMA_DSTC2R_5BITS;
 		video_packet_parameter = MDDI_VDO_PACKET_DESC_RGB565;
-	} else if (mdp->mdp_dev.color_format == MSM_MDP_OUT_IF_FMT_RGB666) {
+	} else if (mdp->mdp_dev.color_format == MSM_MDP_OUT_IF_FMT_RGB666)
+#endif
+	{
 		dma2_cfg |= DMA_DSTC0G_6BITS | DMA_DSTC1B_6BITS | DMA_DSTC2R_6BITS;
 		video_packet_parameter = MDDI_VDO_PACKET_DESC_RGB666;
 	}
