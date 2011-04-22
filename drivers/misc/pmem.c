@@ -82,6 +82,7 @@ struct pmem_data {
 struct pmem_bits {
 	unsigned allocated:1;		/* 1 if allocated, 0 if free */
 	unsigned order:7;		/* size of the region in pmem space */
+	unsigned long allocated_size; /*size in bytes requested to allocate*/
 };
 
 struct pmem_region_node {
@@ -161,6 +162,7 @@ static int id_count;
 #define PMEM_LEN(id, index) ((1 << PMEM_ORDER(id, index)) * PMEM_MIN_ALLOC)
 #define PMEM_END_ADDR(id, index) (PMEM_START_ADDR(id, index) + \
 	PMEM_LEN(id, index))
+#define PMEM_ALOC_LEN(id, index) pmem[id].bitmap[index].allocated_size
 #define PMEM_START_VADDR(id, index) (PMEM_OFFSET(id, index) + pmem[id].vbase)
 #define PMEM_END_VADDR(id, index) (PMEM_START_VADDR(id, index) + \
 	PMEM_LEN(id, index))
@@ -244,6 +246,7 @@ static int pmem_free(int id, int index)
 	}
 	/* clean up the bitmap, merging any buddies */
 	pmem[id].bitmap[curr].allocated = 0;
+	PMEM_ALOC_LEN(id,curr)=0;
 	/* find a slots buddy Buddy# = Slot# ^ (1 << order)
 	 * if the buddy is also free merge them
 	 * repeat until the buddy is not free or end of the bitmap is reached
@@ -435,6 +438,7 @@ static int pmem_allocate(int id, unsigned long len)
 		PMEM_ORDER(id, buddy) = PMEM_ORDER(id, best_fit);
 	}
 	pmem[id].bitmap[best_fit].allocated = 1;
+	PMEM_ALOC_LEN(id,best_fit)=len; /*set aloc len to requested length */
 	return best_fit;
 }
 
@@ -519,6 +523,18 @@ static int pmem_map_pfn_range(int id, struct vm_area_struct *vma,
 		(pmem_start_addr(id, data) + offset) >> PAGE_SHIFT,
 		len, vma->vm_page_prot)) {
 		return -EAGAIN;
+	}
+	if (!pmem[id].no_allocator){
+		if(len > PMEM_ALOC_LEN(id,data->index)){
+			/*enlarge alloc size if fits*/
+			if(pmem_order(len) <= PMEM_ORDER(id,data->index)){
+				printk(KERN_INFO "pmem: enarge alloc len %lx->%lx\n",
+				       PMEM_ALOC_LEN(id,data->index),len);
+				PMEM_ALOC_LEN(id,data->index)=len;
+			}
+			else
+				printk(KERN_INFO "pmem: map > pmem_order\n");
+		}
 	}
 	return 0;
 }
@@ -700,6 +716,30 @@ int get_pmem_user_addr(struct file *file, unsigned long *start,
 	}
 	up_read(&data->sem);
 	return 0;
+}
+
+/* Get the original allocation size of the file; not our allocator's 
+   block size */
+int get_pmem_alloc_size(struct file *file,unsigned long *len)
+{
+	struct pmem_data *data;
+	int id;
+
+	if (!is_pmem_file(file) || !has_allocation(file)) {
+		return -1;
+	}
+	data = (struct pmem_data *) file->private_data;
+	if(data->index == -1) {
+		return -1;
+	}
+	id = get_id(file);
+
+	down_read(&data->sem);
+	*len=PMEM_ALOC_LEN(id,data->index);
+	up_read(&data->sem);
+	if(*len>0)
+		return 0;
+	return -1;
 }
 
 int get_pmem_addr(struct file *file, unsigned long *start,

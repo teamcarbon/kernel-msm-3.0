@@ -111,7 +111,7 @@ static int adsp_pmem_check(struct msm_adsp_module *module,
 static int adsp_pmem_add(struct msm_adsp_module *module,
 			 struct adsp_pmem_info *info)
 {
-	unsigned long paddr, kvaddr, len;
+	unsigned long paddr, kvaddr, len, alloclen;
 	struct file *file;
 	struct adsp_pmem_region *region;
 	int rc = -EINVAL;
@@ -126,6 +126,14 @@ static int adsp_pmem_add(struct msm_adsp_module *module,
 	if (get_pmem_file(info->fd, &paddr, &kvaddr, &len, &file)) {
 		kfree(region);
 		goto end;
+	}
+
+	/* Get the original alloc size; not allocator block size */
+	if(!get_pmem_alloc_size(file,&alloclen)){
+		if(alloclen < len){
+            printk(KERN_INFO "adsp: Adjust: %lx -> %lx\n",len,alloclen);
+			len = alloclen;
+		}
 	}
 
 	rc = adsp_pmem_check(module, info->vaddr, len);

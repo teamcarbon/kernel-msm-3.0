@@ -70,6 +70,7 @@ int pmem_setup(struct android_pmem_platform_data *pdata,
 	       int (*release)(struct inode *, struct file *));
 int pmem_remap(struct pmem_region *region, struct file *file,
 	       unsigned operation);
+int get_pmem_alloc_size(struct file *file,unsigned long *len);
 
 #else
 static inline int is_pmem_file(struct file *file) { return 0; }
@@ -87,6 +88,8 @@ static inline int pmem_setup(struct android_pmem_platform_data *pdata,
 
 static inline int pmem_remap(struct pmem_region *region, struct file *file,
 			     unsigned operation) { return -ENOSYS; }
+static inline int get_pmem_alloc_size(struct file *file,unsigned long *len)
+                  {return -ENOSYS;}
 #endif
 
 #endif //_ANDROID_PPP_H_
