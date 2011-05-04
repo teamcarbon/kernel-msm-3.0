@@ -734,6 +734,11 @@ int get_pmem_alloc_size(struct file *file,unsigned long *len)
 	}
 	id = get_id(file);
 
+	if (pmem[id].no_allocator) {
+		printk(KERN_INFO "pmem: partition %d has no alloc size\n",id);
+		return -1;
+	}
+
 	down_read(&data->sem);
 	*len=PMEM_ALOC_LEN(id,data->index);
 	up_read(&data->sem);
