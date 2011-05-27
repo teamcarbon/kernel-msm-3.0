@@ -253,7 +253,7 @@ extern int nilfs_inode_dirty(struct inode *);
 extern int nilfs_set_file_dirty(struct nilfs_sb_info *, struct inode *,
 				unsigned);
 extern int nilfs_mark_inode_dirty(struct inode *);
-extern void nilfs_dirty_inode(struct inode *);
+extern void nilfs_dirty_inode(struct inode *, int flags);
 
 /* namei.c */
 extern struct dentry *nilfs_get_parent(struct dentry *);
