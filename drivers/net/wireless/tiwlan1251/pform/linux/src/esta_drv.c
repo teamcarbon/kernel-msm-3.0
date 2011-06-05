@@ -105,6 +105,8 @@
 #include "Ethernet.h"
 #include "tiwlan_profile.h"
 
+void mmc_set_tiwlan_state(int loaded);
+
 #if defined(CONFIG_TROUT_PWRSINK) || defined(CONFIG_HTC_PWRSINK)
 #define RX_RATE_INTERVAL_SEC 10
 unsigned long num_rx_pkt_new = 0;
@@ -2019,6 +2021,7 @@ static int __init tiwlan_module_init(void)
     int rc = 0;
 
     printk(KERN_INFO "TIWLAN: Driver loading\n");
+    mmc_set_tiwlan_state(1);
    /* Check sizes of basic structures to ensure that compilation
       options are OK
    */
@@ -2132,6 +2135,7 @@ static void __exit tiwlan_module_cleanup(void)
 #endif
 #endif
     printk(KERN_INFO "TIWLAN: Driver unloaded\n");
+    mmc_set_tiwlan_state(0);
 }
 
 module_init(tiwlan_module_init);

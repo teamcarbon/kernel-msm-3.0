@@ -23,6 +23,7 @@
 #include <linux/log2.h>
 #include <linux/regulator/consumer.h>
 #include <linux/wakelock.h>
+#include <linux/string.h>
 
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
@@ -50,6 +51,13 @@ int use_spi_crc = 1;
 module_param(use_spi_crc, bool, 0);
 
 /*
+ * tiwlan loaded
+ */
+#ifdef CONFIG_TIWLAN1251
+int tiwlan_loaded = 0;
+#endif
+
+/*
  * We normally treat cards as removed during suspend if they are not
  * known to be on a non-removable bus, to avoid the risk of writing
  * back data to a different card after resume.  Allow this to be
@@ -65,6 +73,14 @@ MODULE_PARM_DESC(
 	removable,
 	"MMC/SD cards are removable and may be removed during suspend");
 
+
+#ifdef CONFIG_TIWLAN1251
+void mmc_set_tiwlan_state(int loaded)
+{
+	tiwlan_loaded=loaded;
+}
+EXPORT_SYMBOL(mmc_set_tiwlan_state);
+#endif
 /*
  * Internal function. Schedule delayed work in the MMC work queue.
  */
@@ -1453,7 +1469,15 @@ void mmc_rescan(struct work_struct *work)
 		spin_unlock_irqrestore(&host->lock, flags);
 		return;
 	}
-
+#ifdef CONFIG_TIWLAN1251
+	if(tiwlan_loaded <= 0 && strncmp(mmc_hostname(host),"mmc0",5)==0){
+		if(tiwlan_loaded<0){
+			spin_unlock_irqrestore(&host->lock, flags);
+			return;
+		}
+		tiwlan_loaded=-1;
+	}
+#endif
 	spin_unlock_irqrestore(&host->lock, flags);
 
 
