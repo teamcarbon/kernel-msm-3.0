@@ -40,7 +40,7 @@ struct synaptics_ts_data {
 	int use_irq;
 	bool has_relative_report;
 	struct hrtimer timer;
-	struct work_struct  work;
+	struct delayed_work  work;
 	uint16_t max[2];
 	int snap_state[2][2];
 	int snap_down_on[2];
@@ -56,6 +56,8 @@ struct synaptics_ts_data {
 	int (*power)(int on);
 	struct early_suspend early_suspend;
 };
+
+#define TS_POLLING_TIME 6
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void synaptics_ts_early_suspend(struct early_suspend *h);
@@ -140,7 +142,10 @@ static void synaptics_ts_work_func(struct work_struct *work)
 	struct i2c_msg msg[2];
 	uint8_t start_reg;
 	uint8_t buf[15];
-	struct synaptics_ts_data *ts = container_of(work, struct synaptics_ts_data, work);
+	struct synaptics_ts_data *ts = container_of(
+	                         container_of(work, struct delayed_work, work), 
+	                         struct synaptics_ts_data, work);
+
 	int buf_len = ts->has_relative_report ? 15 : 13;
 
 	msg[0].addr = ts->client->addr;
@@ -296,7 +301,8 @@ static enum hrtimer_restart synaptics_ts_timer_func(struct hrtimer *timer)
 	struct synaptics_ts_data *ts = container_of(timer, struct synaptics_ts_data, timer);
 	/* printk("synaptics_ts_timer_func\n"); */
 
-	queue_work(synaptics_wq, &ts->work);
+	queue_delayed_work(synaptics_wq, &ts->work,
+	                   msecs_to_jiffies(TS_POLLING_TIME));
 
 	hrtimer_start(&ts->timer, ktime_set(0, 12500000), HRTIMER_MODE_REL);
 	return HRTIMER_NORESTART;
@@ -308,7 +314,8 @@ static irqreturn_t synaptics_ts_irq_handler(int irq, void *dev_id)
 
 	/* printk("synaptics_ts_irq_handler\n"); */
 	disable_irq_nosync(ts->client->irq);
-	queue_work(synaptics_wq, &ts->work);
+	queue_delayed_work(synaptics_wq, &ts->work,
+	                   msecs_to_jiffies(TS_POLLING_TIME));
 	return IRQ_HANDLED;
 }
 
@@ -349,7 +356,7 @@ static int synaptics_ts_probe(
 		ret = -ENOMEM;
 		goto err_alloc_data_failed;
 	}
-	INIT_WORK(&ts->work, synaptics_ts_work_func);
+	INIT_DELAYED_WORK(&ts->work, synaptics_ts_work_func);
 	ts->client = client;
 	i2c_set_clientdata(client, ts);
 	pdata = client->dev.platform_data;
@@ -635,7 +642,7 @@ static int synaptics_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 		disable_irq(client->irq);
 	else
 		hrtimer_cancel(&ts->timer);
-	ret = cancel_work_sync(&ts->work);
+	ret = cancel_delayed_work_sync(&ts->work);
 	if (ret && ts->use_irq) /* if work was pending disable-count is now 2 */
 		enable_irq(client->irq);
 	ret = i2c_smbus_write_byte_data(ts->client, 0xf1, 0); /* disable interrupt */
