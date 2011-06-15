@@ -451,6 +451,10 @@ struct fsg_dev {
 
 	struct usb_ep		*bulk_in;
 	struct usb_ep		*bulk_out;
+
+#ifdef CONFIG_ENABLE_FROYO_SUPPORT
+	struct switch_dev sdev;
+#endif
 };
 
 
@@ -474,6 +478,9 @@ static inline struct fsg_dev *fsg_from_func(struct usb_function *f)
 
 
 typedef void (*fsg_routine_t)(struct fsg_dev *);
+#ifdef CONFIG_ENABLE_FROYO_SUPPORT
+static int send_status(struct fsg_common *common);
+#endif
 
 static int exception_in_progress(struct fsg_common *common)
 {
@@ -2448,6 +2455,10 @@ static void fsg_disable(struct usb_function *f)
 
 /*-------------------------------------------------------------------------*/
 
+#ifdef CONFIG_ENABLE_FROYO_SUPPORT
+static struct fsg_dev                  *the_fsg;
+#endif
+
 static void handle_exception(struct fsg_common *common)
 {
 	siginfo_t		info;
@@ -2563,6 +2574,9 @@ static void handle_exception(struct fsg_common *common)
 
 	case FSG_STATE_CONFIG_CHANGE:
 		do_set_interface(common, common->new_fsg);
+#ifdef CONFIG_ENABLE_FROYO_SUPPORT
+		switch_set_state(&the_fsg->sdev, !!common->new_fsg);
+#endif
 		break;
 
 	case FSG_STATE_EXIT:
@@ -2967,9 +2981,23 @@ static void fsg_unbind(struct usb_configuration *c, struct usb_function *f)
 	fsg_common_put(common);
 	usb_free_descriptors(fsg->function.descriptors);
 	usb_free_descriptors(fsg->function.hs_descriptors);
+#ifdef CONFIG_ENABLE_FROYO_SUPPORT
+	switch_dev_unregister(&fsg->sdev);
+#endif
 	kfree(fsg);
 }
 
+#ifdef CONFIG_ENABLE_FROYO_SUPPORT
+static ssize_t print_switch_name(struct switch_dev *sdev, char *buf)
+{
+	return sprintf(buf, "%s\n", FUNCTION_NAME);
+}
+static ssize_t print_switch_state(struct switch_dev *sdev, char *buf)
+{
+	struct fsg_dev  *fsg = container_of(sdev, struct fsg_dev, sdev);
+	return sprintf(buf, "%s\n", (fsg->common->new_fsg ? "online" : "offline"));
+}
+#endif
 
 static int fsg_bind(struct usb_configuration *c, struct usb_function *f)
 {
@@ -3044,7 +3072,15 @@ static int fsg_bind_config(struct usb_composite_dev *cdev,
 	if (unlikely(!fsg))
 		return -ENOMEM;
 
-
+#ifdef CONFIG_ENABLE_FROYO_SUPPORT
+	the_fsg = fsg;
+	fsg->sdev.name = FUNCTION_NAME;
+	fsg->sdev.print_name = print_switch_name;
+	fsg->sdev.print_state = print_switch_state;
+	rc = switch_dev_register(&fsg->sdev);
+	if (rc < 0)
+		return rc;
+#endif
 #ifdef CONFIG_USB_ANDROID_MASS_STORAGE
 	fsg->function.name        = FUNCTION_NAME;
 #else
