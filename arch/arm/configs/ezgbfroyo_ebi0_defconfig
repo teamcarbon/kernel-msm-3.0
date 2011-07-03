@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.36.4-s2
-# Tue Jun 14 23:18:21 2011
+# Linux kernel version: 2.6.36.4-s3
+# Sat Jul  2 20:49:13 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1415,6 +1415,7 @@ CONFIG_USB_ANDROID_MASS_STORAGE=y
 # CONFIG_USB_ANDROID_MTP is not set
 CONFIG_USB_ANDROID_RNDIS=y
 CONFIG_USB_ANDROID_RNDIS_WCEIS=y
+# CONFIG_USB_ANDROID_ACCESSORY is not set
 # CONFIG_USB_CDC_COMPOSITE is not set
 # CONFIG_USB_G_MULTI is not set
 # CONFIG_USB_G_HID is not set
