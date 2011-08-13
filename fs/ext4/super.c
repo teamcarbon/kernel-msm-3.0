@@ -889,7 +889,6 @@ static int ext4_drop_inode(struct inode *inode)
 
 static void ext4_destroy_inode(struct inode *inode)
 {
-	ext4_ioend_wait(inode);
 	if (!list_empty(&(EXT4_I(inode)->i_orphan))) {
 		ext4_msg(inode->i_sb, KERN_ERR,
 			 "Inode %lu (%p): orphan list check failed!",
