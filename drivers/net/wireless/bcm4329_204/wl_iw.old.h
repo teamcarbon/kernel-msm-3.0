@@ -47,10 +47,10 @@
 #define BAND_SET_CMD				"BANDSET"
 
 #define	WL_IW_RSSI_MINVAL	-200
-#define	WL_IW_RSSI_NO_SIGNAL	-110
-#define	WL_IW_RSSI_VERY_LOW	-100
-#define	WL_IW_RSSI_LOW		-85
-#define	WL_IW_RSSI_GOOD		-70
+#define	WL_IW_RSSI_NO_SIGNAL	-91
+#define	WL_IW_RSSI_VERY_LOW	-80
+#define	WL_IW_RSSI_LOW		-70
+#define	WL_IW_RSSI_GOOD		-68
 #define	WL_IW_RSSI_VERY_GOOD	-58
 #define	WL_IW_RSSI_EXCELLENT	-57
 #define	WL_IW_RSSI_INVALID	 0
@@ -242,3 +242,4 @@ extern int wl_iw_parse_channel_list(char** list_str, uint16* channel_list, int c
 #endif
 
 #endif
+
