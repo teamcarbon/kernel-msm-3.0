@@ -1727,6 +1727,32 @@ static ssize_t usb_remote_wakeup(struct device *dev,
 }
 static DEVICE_ATTR(wakeup, S_IWUSR, 0, usb_remote_wakeup);
 
+#ifdef CONFIG_USB_HTC_SWITCH_STUB
+int android_show_function(char *buf)
+{
+     unsigned length = 0;
+
+      length += sprintf(buf + length, "ether:disable\n");
+
+      return length;
+}
+
+static ssize_t show_usb_function_switch(struct device *dev,
+      struct device_attribute *attr, char *buf)
+{
+      return android_show_function(buf);
+}
+
+static ssize_t store_usb_function_switch(struct device *dev,
+      struct device_attribute *attr, const char *buf, size_t count)
+{
+      return 0;
+}
+
+static DEVICE_ATTR(usb_function_switch, 0664,
+     show_usb_function_switch, store_usb_function_switch);
+#endif
+
 static int msm72k_probe(struct platform_device *pdev)
 {
 	struct resource *res;
