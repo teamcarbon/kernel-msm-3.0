@@ -1360,7 +1360,13 @@ int mmc_card_sleep(struct mmc_host *host)
 	if (host->bus_ops && !host->bus_dead && host->bus_ops->awake)
 		err = host->bus_ops->sleep(host);
 
+<<<<<<<
 	mmc_bus_put(host);
+=======
+	case PM_POST_SUSPEND:
+	case PM_POST_HIBERNATION:
+	case PM_POST_RESTORE:
+>>>>>>>
 
 	return err;
 }
