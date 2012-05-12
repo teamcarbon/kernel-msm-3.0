@@ -864,10 +864,6 @@ int write_cache_pages(struct address_space *mapping,
 			end = i_size_read(mapping->host) >> PAGE_CACHE_SHIFT;
 		}
 	}
-<<<<<<< HEAD
-
-retry:
-=======
 	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
 		tag = PAGECACHE_TAG_TOWRITE;
 	else
@@ -875,7 +871,6 @@ retry:
 retry:
 	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
 		tag_pages_for_writeback(mapping, index, end);
->>>>>>> ac69306... writeback: introduce .tagged_writepages for the WB_SYNC_NONE sync stage
 	done_index = index;
 	while (!done && (index <= end)) {
 		int i;
