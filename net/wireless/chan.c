@@ -57,7 +57,19 @@ int cfg80211_set_freq(struct cfg80211_registered_device *rdev,
 		ASSERT_WDEV_LOCK(wdev);
 
 		if (!netif_running(wdev->netdev))
+<<<<<<<
 			return -ENETDOWN;
+=======
+	switch (channel_type) {
+	case NL80211_CHAN_HT40PLUS:
+		diff = 20;
+		break;
+	case NL80211_CHAN_HT40MINUS:
+		diff = -20;
+		break;
+	default:
+		return false;
+>>>>>>>
 	}
 
 	if (!rdev->ops->set_channel)
