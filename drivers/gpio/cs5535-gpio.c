@@ -56,8 +56,6 @@ static struct cs5535_gpio_chip {
  * registers, see include/linux/cs5535.h.
  */
 
-<<<<<<<
-=======
 static void errata_outl(struct cs5535_gpio_chip *chip, u32 val,
 		unsigned int reg)
 {
@@ -81,7 +79,6 @@ static void errata_outl(struct cs5535_gpio_chip *chip, u32 val,
 	outl(val, addr);
 }
 
->>>>>>>
 static void __cs5535_gpio_set(struct cs5535_gpio_chip *chip, unsigned offset,
 		unsigned int reg)
 {
@@ -90,11 +87,7 @@ static void __cs5535_gpio_set(struct cs5535_gpio_chip *chip, unsigned offset,
 		outl(1 << offset, chip->base + reg);
 	else
 		/* high bank register */
-<<<<<<<
-		outl(1 << (offset - 16), chip->base + 0x80 + reg);
-=======
 		errata_outl(chip, 1 << (offset - 16), reg);
->>>>>>>
 }
 
 void cs5535_gpio_set(unsigned offset, unsigned int reg)
@@ -116,11 +109,7 @@ static void __cs5535_gpio_clear(struct cs5535_gpio_chip *chip, unsigned offset,
 		outl(1 << (offset + 16), chip->base + reg);
 	else
 		/* high bank register */
-<<<<<<<
-		outl(1 << offset, chip->base + 0x80 + reg);
-=======
 		errata_outl(chip, 1 << offset, reg);
->>>>>>>
 }
 
 void cs5535_gpio_clear(unsigned offset, unsigned int reg)

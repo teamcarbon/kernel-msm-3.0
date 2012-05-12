@@ -461,11 +461,6 @@ static int xhci_test_radix_tree(struct xhci_hcd *xhci,
 						mapped_ring);
 				return -EINVAL;
 			}
-<<<<<<<
-=======
-			/* FIXME: Should we disable the port? */
-			continue;
->>>>>>>
 		}
 		/* One TRB after the end of the ring segment shouldn't return a
 		 * pointer to the current ring (although it may be a part of a
@@ -1750,29 +1745,6 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	if (!xhci->erst.entries)
 		goto fail;
 	xhci_dbg(xhci, "// Allocated event ring segment table at 0x%llx\n",
-<<<<<<<
-=======
-			return -ENOMEM;
-
-		port_index = 0;
-		for (i = 0; i < num_ports; i++) {
-			if (xhci->port_array[i] == 0x03 ||
-					xhci->port_array[i] == 0 ||
-					xhci->port_array[i] == -1)
-				continue;
-
-			xhci->usb2_ports[port_index] =
-				&xhci->op_regs->port_status_base +
-				NUM_PORT_REGS*i;
-			xhci_dbg(xhci, "USB 2.0 port at index %u, "
-					"addr = %p\n", i,
-					xhci->usb2_ports[port_index]);
-			port_index++;
-		}
-	}
-	if (xhci->num_usb3_ports) {
-		xhci->usb3_ports = kmalloc(sizeof(*xhci->usb3_ports)*
->>>>>>>
 			(unsigned long long)dma);
 
 	memset(xhci->erst.entries, 0, sizeof(struct xhci_erst_entry)*ERST_NUM_SEGS);
