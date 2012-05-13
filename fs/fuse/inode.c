@@ -1068,11 +1068,12 @@ static struct file_system_type fuse_fs_type = {
 };
 
 #ifdef CONFIG_BLOCK
-static struct dentry *fuse_mount_blk(struct file_system_type *fs_type,
+static int fuse_get_sb_blk(struct file_system_type *fs_type,
 			   int flags, const char *dev_name,
-			   void *raw_data)
+			   void *raw_data, struct vfsmount *mnt)
 {
-	return mount_bdev(fs_type, flags, dev_name, raw_data, fuse_fill_super);
+	return get_sb_bdev(fs_type, flags, dev_name, raw_data, fuse_fill_super,
+			   mnt);
 }
 
 static void fuse_kill_sb_blk(struct super_block *sb)
@@ -1091,7 +1092,7 @@ static void fuse_kill_sb_blk(struct super_block *sb)
 static struct file_system_type fuseblk_fs_type = {
 	.owner		= THIS_MODULE,
 	.name		= "fuseblk",
-	.mount		= fuse_mount_blk,
+	.get_sb		= fuse_get_sb_blk,
 	.kill_sb	= fuse_kill_sb_blk,
 	.fs_flags	= FS_REQUIRES_DEV | FS_HAS_SUBTYPE,
 };

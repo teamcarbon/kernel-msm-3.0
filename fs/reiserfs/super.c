@@ -2217,11 +2217,12 @@ out:
 
 #endif
 
-static struct dentry *get_super_block(struct file_system_type *fs_type,
+static int get_super_block(struct file_system_type *fs_type,
 			   int flags, const char *dev_name,
-			   void *data)
+			   void *data, struct vfsmount *mnt)
 {
-	return mount_bdev(fs_type, flags, dev_name, data, reiserfs_fill_super);
+	return get_sb_bdev(fs_type, flags, dev_name, data, reiserfs_fill_super,
+			   mnt);
 }
 
 static int __init init_reiserfs_fs(void)
@@ -2256,7 +2257,7 @@ static void __exit exit_reiserfs_fs(void)
 struct file_system_type reiserfs_fs_type = {
 	.owner = THIS_MODULE,
 	.name = "reiserfs",
-	.mount = get_super_block,
+	.get_sb = get_super_block,
 	.kill_sb = reiserfs_kill_sb,
 	.fs_flags = FS_REQUIRES_DEV,
 };

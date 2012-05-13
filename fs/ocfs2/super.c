@@ -1212,12 +1212,14 @@ read_super_error:
 	return status;
 }
 
-static struct dentry *ocfs2_mount(struct file_system_type *fs_type,
+static int ocfs2_get_sb(struct file_system_type *fs_type,
 			int flags,
 			const char *dev_name,
-			void *data)
+			void *data,
+			struct vfsmount *mnt)
 {
-	return mount_bdev(fs_type, flags, dev_name, data, ocfs2_fill_super);
+	return get_sb_bdev(fs_type, flags, dev_name, data, ocfs2_fill_super,
+			   mnt);
 }
 
 static void ocfs2_kill_sb(struct super_block *sb)
@@ -1241,7 +1243,8 @@ out:
 static struct file_system_type ocfs2_fs_type = {
 	.owner          = THIS_MODULE,
 	.name           = "ocfs2",
-	.mount          = ocfs2_mount,
+	.get_sb         = ocfs2_get_sb, /* is this called when we mount
+					* the fs? */
 	.kill_sb        = ocfs2_kill_sb,
 
 	.fs_flags       = FS_REQUIRES_DEV|FS_RENAME_DOES_D_MOVE,

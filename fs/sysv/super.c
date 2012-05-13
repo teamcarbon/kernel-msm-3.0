@@ -499,22 +499,23 @@ failed:
 
 /* Every kernel module contains stuff like this. */
 
-static struct dentry *sysv_mount(struct file_system_type *fs_type,
-	int flags, const char *dev_name, void *data)
+static int sysv_get_sb(struct file_system_type *fs_type,
+	int flags, const char *dev_name, void *data, struct vfsmount *mnt)
 {
-	return mount_bdev(fs_type, flags, dev_name, data, sysv_fill_super);
+	return get_sb_bdev(fs_type, flags, dev_name, data, sysv_fill_super,
+			   mnt);
 }
 
-static struct dentry *v7_mount(struct file_system_type *fs_type,
-	int flags, const char *dev_name, void *data)
+static int v7_get_sb(struct file_system_type *fs_type,
+	int flags, const char *dev_name, void *data, struct vfsmount *mnt)
 {
-	return mount_bdev(fs_type, flags, dev_name, data, v7_fill_super);
+	return get_sb_bdev(fs_type, flags, dev_name, data, v7_fill_super, mnt);
 }
 
 static struct file_system_type sysv_fs_type = {
 	.owner		= THIS_MODULE,
 	.name		= "sysv",
-	.mount		= sysv_mount,
+	.get_sb		= sysv_get_sb,
 	.kill_sb	= kill_block_super,
 	.fs_flags	= FS_REQUIRES_DEV,
 };
@@ -522,7 +523,7 @@ static struct file_system_type sysv_fs_type = {
 static struct file_system_type v7_fs_type = {
 	.owner		= THIS_MODULE,
 	.name		= "v7",
-	.mount		= v7_mount,
+	.get_sb		= v7_get_sb,
 	.kill_sb	= kill_block_super,
 	.fs_flags	= FS_REQUIRES_DEV,
 };

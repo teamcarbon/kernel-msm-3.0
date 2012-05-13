@@ -741,9 +741,10 @@ static int test_bdev_super(struct super_block *s, void *data)
 	return (void *)s->s_bdev == data;
 }
 
-struct dentry *mount_bdev(struct file_system_type *fs_type,
+int get_sb_bdev(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data,
-	int (*fill_super)(struct super_block *, void *, int))
+	int (*fill_super)(struct super_block *, void *, int),
+	struct vfsmount *mnt)
 {
 	struct block_device *bdev;
 	struct super_block *s;
@@ -755,7 +756,7 @@ struct dentry *mount_bdev(struct file_system_type *fs_type,
 
 	bdev = open_bdev_exclusive(dev_name, mode, fs_type);
 	if (IS_ERR(bdev))
-		return ERR_CAST(bdev);
+		return PTR_ERR(bdev);
 
 	/*
 	 * once the super is inserted into the list by sget, s_umount
@@ -798,30 +799,15 @@ struct dentry *mount_bdev(struct file_system_type *fs_type,
 		bdev->bd_super = s;
 	}
 
-	return dget(s->s_root);
+	simple_set_mnt(mnt, s);
+	return 0;
 
 error_s:
 	error = PTR_ERR(s);
 error_bdev:
 	close_bdev_exclusive(bdev, mode);
 error:
-	return ERR_PTR(error);
-}
-EXPORT_SYMBOL(mount_bdev);
-
-int get_sb_bdev(struct file_system_type *fs_type,
-	int flags, const char *dev_name, void *data,
-	int (*fill_super)(struct super_block *, void *, int),
-	struct vfsmount *mnt)
-{
-	struct dentry *root;
-
-	root = mount_bdev(fs_type, flags, dev_name, data, fill_super);
-	if (IS_ERR(root))
-		return PTR_ERR(root);
-	mnt->mnt_root = root;
-	mnt->mnt_sb = root->d_sb;
-	return 0;
+	return error;
 }
 
 EXPORT_SYMBOL(get_sb_bdev);
