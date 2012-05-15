@@ -743,6 +743,11 @@ int get_pmem_addr(struct file *file, unsigned long *start,
 	}
 	id = get_id(file);
 
+	if (pmem[id].no_allocator) {
+		printk(KERN_INFO "pmem: partition %d has no alloc size\n",id);
+		return -1;
+	}
+
 	down_read(&data->sem);
 	*start = pmem_start_addr(id, data);
 	*len = pmem_len(id, data);
